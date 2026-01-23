@@ -1,0 +1,228 @@
+use crate::mode::{Mode, PomodoroPhase};
+use std::io::{self, Write};
+
+pub fn draw(mode: Mode, elapsed: std::time::Duration, remaining: Option<std::time::Duration>) {
+    let title = match mode {
+        Mode::TimerUp => "TIMER UP".to_string(),
+        Mode::TimerDown { .. } => "TIMER DOWN".to_string(),
+        Mode::Stopwatch => "STOPWATCH".to_string(),
+        Mode::Pomodoro { phase, emoji, .. } => {
+            let base = match phase {
+                PomodoroPhase::Focus => "POMODORO FOCUS",
+                PomodoroPhase::Break => "POMODORO BREAK",
+            };
+            let emoji_str = pomodoro_emoji(emoji);
+            format!("{} {}", base, emoji_str)
+        }
+    };
+
+    let primary = match mode {
+        Mode::TimerDown { .. } | Mode::Pomodoro { .. } => remaining.unwrap_or_default(),
+        _ => elapsed,
+    };
+
+    let time_str = format_hms(primary);
+
+    let mut lines: Vec<String> = Vec::new();
+    lines.push("ZENTIME".to_string());
+    lines.push(title);
+    lines.push("".to_string());
+    lines.push(time_str);
+
+    match mode {
+        Mode::TimerDown { .. } => {
+            lines.push("".to_string());
+            lines.push(format!("Elapsed: {}", format_hms(elapsed)));
+        }
+        Mode::Pomodoro { .. } => {
+            lines.push("".to_string());
+            lines.push(format!("Session: {}", format_hms(elapsed)));
+        }
+        _ => {}
+    }
+
+    let (cols, rows) = terminal_size();
+    let max_inner = cols.saturating_sub(6).max(10);
+    let (boxed, _box_width, _box_height) = boxed_centered(&lines, max_inner, cols, rows);
+
+    let mut out = String::new();
+    out.push_str("\x1b[2J\x1b[H");
+    out.push_str(&boxed);
+
+    let mut stdout = io::stdout();
+    let _ = stdout.write_all(out.as_bytes());
+    let _ = stdout.flush();
+}
+
+fn pomodoro_emoji(idx: u8) -> &'static str {
+    const EMOJIS: [&str; 10] = ["🍅", "☕", "🌙", "⚡", "🧠", "🎧", "🌿", "📌", "🔥", "🕯️"];
+    let i = (idx as usize) % EMOJIS.len();
+    EMOJIS[i]
+}
+
+fn terminal_size() -> (usize, usize) {
+    #[cfg(target_os = "linux")]
+    {
+        if let Some((c, r)) = terminal_size_linux_ioctl() {
+            return (c.max(20), r.max(10));
+        }
+    }
+
+    let cols = std::env::var("COLUMNS")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(80);
+    let rows = std::env::var("LINES")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(24);
+    (cols.max(20), rows.max(10))
+}
+
+#[cfg(target_os = "linux")]
+fn terminal_size_linux_ioctl() -> Option<(usize, usize)> {
+    use std::os::fd::AsRawFd;
+
+    #[repr(C)]
+    struct Winsize {
+        ws_row: u16,
+        ws_col: u16,
+        ws_xpixel: u16,
+        ws_ypixel: u16,
+    }
+
+    extern "C" {
+        fn ioctl(fd: i32, request: u64, ...) -> i32;
+    }
+
+    const TIOCGWINSZ: u64 = 0x5413;
+    let fd = io::stdout().as_raw_fd();
+    let mut ws = Winsize {
+        ws_row: 0,
+        ws_col: 0,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+
+    let rc = unsafe { ioctl(fd, TIOCGWINSZ, &mut ws) };
+    if rc == 0 && ws.ws_col > 0 && ws.ws_row > 0 {
+        Some((ws.ws_col as usize, ws.ws_row as usize))
+    } else {
+        None
+    }
+}
+
+fn boxed_centered(
+    lines: &[String],
+    max_inner: usize,
+    cols: usize,
+    rows: usize,
+) -> (String, usize, usize) {
+    let wrapped = wrap_lines(lines, max_inner);
+    let inner_width = wrapped
+        .iter()
+        .map(|l| l.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(1);
+
+    let pad = 1usize;
+    let inside = inner_width + pad * 2;
+    let box_width = inside + 2;
+    let box_height = wrapped.len() + 2;
+
+    let left = cols.saturating_sub(box_width) / 2;
+    let top = rows.saturating_sub(box_height) / 2;
+
+    let mut out = String::new();
+    for _ in 0..top {
+        out.push('\n');
+    }
+
+    let margin = " ".repeat(left);
+
+    out.push_str(&margin);
+    out.push('┌');
+    out.push_str(&"─".repeat(inside));
+    out.push('┐');
+    out.push('\n');
+
+    for line in wrapped {
+        let len = line.chars().count();
+        let remaining = inner_width.saturating_sub(len);
+        let left_extra = remaining / 2;
+        let right_spaces = remaining - left_extra;
+        out.push_str(&margin);
+        out.push('│');
+        out.push_str(&" ".repeat(pad));
+        out.push_str(&" ".repeat(left_extra));
+        out.push_str(&line);
+        out.push_str(&" ".repeat(right_spaces));
+        out.push_str(&" ".repeat(pad));
+        out.push('│');
+        out.push('\n');
+    }
+
+    out.push_str(&margin);
+    out.push('└');
+    out.push_str(&"─".repeat(inside));
+    out.push('┘');
+    out.push('\n');
+
+    (out, box_width, box_height)
+}
+
+fn wrap_lines(lines: &[String], width: usize) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for line in lines {
+        if line.is_empty() {
+            out.push(String::new());
+            continue;
+        }
+        let mut current = String::new();
+        for word in line.split_whitespace() {
+            let cur_len = current.chars().count();
+            let word_len = word.chars().count();
+            let sep = if current.is_empty() { 0 } else { 1 };
+            if cur_len + sep + word_len <= width {
+                if !current.is_empty() {
+                    current.push(' ');
+                }
+                current.push_str(word);
+            } else {
+                if !current.is_empty() {
+                    out.push(current);
+                }
+                if word_len <= width {
+                    current = word.to_string();
+                } else {
+                    let mut chunk = String::new();
+                    for ch in word.chars() {
+                        if chunk.chars().count() >= width {
+                            out.push(chunk);
+                            chunk = String::new();
+                        }
+                        chunk.push(ch);
+                    }
+                    current = chunk;
+                }
+            }
+        }
+        if !current.is_empty() {
+            out.push(current);
+        }
+    }
+    out
+}
+
+fn format_hms(d: std::time::Duration) -> String {
+    let secs = d.as_secs();
+    let h = secs / 3600;
+    let m = (secs % 3600) / 60;
+    let s = secs % 60;
+    if h > 0 {
+        format!("{:02}:{:02}:{:02}", h, m, s)
+    } else {
+        format!("{:02}:{:02}", m, s)
+    }
+}
