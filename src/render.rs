@@ -11,7 +11,8 @@ pub fn draw(mode: Mode, elapsed: std::time::Duration, remaining: Option<std::tim
                 PomodoroPhase::Focus => "POMODORO FOCUS",
                 PomodoroPhase::Break => "POMODORO BREAK",
             };
-            let emoji_str = pomodoro_emoji(emoji);
+            let dyn_idx = emoji.wrapping_add((elapsed.as_secs() / 5) as u8);
+            let emoji_str = pomodoro_emoji(dyn_idx);
             format!("{} {}", base, emoji_str)
         }
     };
@@ -24,7 +25,7 @@ pub fn draw(mode: Mode, elapsed: std::time::Duration, remaining: Option<std::tim
     let time_str = format_hms(primary);
 
     let mut lines: Vec<String> = Vec::new();
-    lines.push("ZENTIME".to_string());
+    lines.push("ZENRITME".to_string());
     lines.push(title);
     lines.push("".to_string());
     lines.push(time_str);
@@ -58,6 +59,47 @@ fn pomodoro_emoji(idx: u8) -> &'static str {
     const EMOJIS: [&str; 10] = ["🍅", "☕", "🌙", "⚡", "🧠", "🎧", "🌿", "📌", "🔥", "🕯️"];
     let i = (idx as usize) % EMOJIS.len();
     EMOJIS[i]
+}
+
+fn display_width(s: &str) -> usize {
+    s.chars().map(char_display_width).sum()
+}
+
+fn char_display_width(ch: char) -> usize {
+    let u = ch as u32;
+    if u == 0 {
+        return 0;
+    }
+    if u == 0x200D || (0xFE00..=0xFE0F).contains(&u) {
+        return 0;
+    }
+    if (0x0300..=0x036F).contains(&u)
+        || (0x1AB0..=0x1AFF).contains(&u)
+        || (0x1DC0..=0x1DFF).contains(&u)
+        || (0x20D0..=0x20FF).contains(&u)
+        || (0xFE20..=0xFE2F).contains(&u)
+    {
+        return 0;
+    }
+
+    if (0x1100..=0x115F).contains(&u)
+        || u == 0x2329
+        || u == 0x232A
+        || (0x2E80..=0xA4CF).contains(&u)
+        || (0xAC00..=0xD7A3).contains(&u)
+        || (0xF900..=0xFAFF).contains(&u)
+        || (0xFE10..=0xFE19).contains(&u)
+        || (0xFE30..=0xFE6F).contains(&u)
+        || (0xFF00..=0xFF60).contains(&u)
+        || (0xFFE0..=0xFFE6).contains(&u)
+        || (0x2600..=0x27BF).contains(&u)
+        || (0x1F1E6..=0x1F1FF).contains(&u)
+        || (0x1F300..=0x1FAFF).contains(&u)
+    {
+        return 2;
+    }
+
+    1
 }
 
 fn terminal_size() -> (usize, usize) {
@@ -121,7 +163,7 @@ fn boxed_centered(
     let wrapped = wrap_lines(lines, max_inner);
     let inner_width = wrapped
         .iter()
-        .map(|l| l.chars().count())
+        .map(|l| display_width(l))
         .max()
         .unwrap_or(0)
         .max(1);
@@ -148,7 +190,7 @@ fn boxed_centered(
     out.push('\n');
 
     for line in wrapped {
-        let len = line.chars().count();
+        let len = display_width(&line);
         let remaining = inner_width.saturating_sub(len);
         let left_extra = remaining / 2;
         let right_spaces = remaining - left_extra;
@@ -180,31 +222,38 @@ fn wrap_lines(lines: &[String], width: usize) -> Vec<String> {
             continue;
         }
         let mut current = String::new();
+        let mut current_width = 0usize;
         for word in line.split_whitespace() {
-            let cur_len = current.chars().count();
-            let word_len = word.chars().count();
+            let word_len = display_width(word);
             let sep = if current.is_empty() { 0 } else { 1 };
-            if cur_len + sep + word_len <= width {
+            if current_width + sep + word_len <= width {
                 if !current.is_empty() {
                     current.push(' ');
                 }
                 current.push_str(word);
+                current_width += sep + word_len;
             } else {
                 if !current.is_empty() {
                     out.push(current);
                 }
                 if word_len <= width {
                     current = word.to_string();
+                    current_width = word_len;
                 } else {
                     let mut chunk = String::new();
+                    let mut chunk_width = 0usize;
                     for ch in word.chars() {
-                        if chunk.chars().count() >= width {
+                        let ch_w = char_display_width(ch);
+                        if chunk_width + ch_w > width && chunk_width > 0 {
                             out.push(chunk);
                             chunk = String::new();
+                            chunk_width = 0;
                         }
                         chunk.push(ch);
+                        chunk_width += ch_w;
                     }
                     current = chunk;
+                    current_width = display_width(&current);
                 }
             }
         }

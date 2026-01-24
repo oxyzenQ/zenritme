@@ -9,7 +9,7 @@ pub enum Command {
 
 pub fn usage() -> String {
     format!(
-        "zentime v{}\n\nUsage:\n  zentime --timer-up\n  zentime --timer-down <DURATION>\n  zentime --stopwatch\n  zentime --pomodoro [FOCUS] [BREAK]\n  zentime --sound-test\n  zentime --help\n\nDuration format:\n  <number>s | <number>m | <number>h\nExamples:\n  30s\n  10m\n  1h\n\nPomodoro examples:\n  zentime --pomodoro\n  zentime --pomodoro 3s 2s",
+        "zenritme v{}\n\nUsage:\n  zenritme --timer-up\n  zenritme --timer-down <DURATION>\n  zenritme --stopwatch\n  zenritme --pomodoro [FOCUS] [BREAK]\n  zenritme --sound-test\n  zenritme --help\n\nDuration format:\n  <number>s | <number>m | <number>h\nExamples:\n  30s\n  10m\n  1h\n\nPomodoro examples:\n  zenritme --pomodoro\n  zenritme --pomodoro 3s 2s",
         env!("CARGO_PKG_VERSION")
     )
 }
