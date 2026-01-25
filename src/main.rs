@@ -54,13 +54,8 @@ fn setup_input() -> (TerminalGuard, Option<mpsc::Receiver<u8>>) {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         let mut buf = [0u8; 1];
-        loop {
-            match tty.read_exact(&mut buf) {
-                Ok(()) => {
-                    let _ = tx.send(buf[0]);
-                }
-                Err(_) => break,
-            }
+        while let Ok(()) = tty.read_exact(&mut buf) {
+            let _ = tx.send(buf[0]);
         }
     });
 

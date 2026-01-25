@@ -24,11 +24,7 @@ pub fn draw(mode: Mode, elapsed: std::time::Duration, remaining: Option<std::tim
 
     let time_str = format_hms(primary);
 
-    let mut lines: Vec<String> = Vec::new();
-    lines.push("ZENRITME".to_string());
-    lines.push(title);
-    lines.push("".to_string());
-    lines.push(time_str);
+    let mut lines: Vec<String> = vec!["ZENRITME".to_string(), title, "".to_string(), time_str];
 
     match mode {
         Mode::TimerDown { .. } => {

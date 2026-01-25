@@ -4,7 +4,7 @@ version = "1.0.0"
 edition = "2021"
 
 description = "Minimal terminal timer, stopwatch, and pomodoro"
-authors = ["rezky_nightky <rezky@gmail.com>"]
+authors = ["rezky_nightky <with.rezky@gmail.com>"]
 repository = "https://github.com/oxyzenQ/zenritme"
 license = "MIT"
 

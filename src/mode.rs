@@ -7,7 +7,9 @@ pub enum PomodoroPhase {
 #[derive(Clone, Copy, Debug)]
 pub enum Mode {
     TimerUp,
-    TimerDown { total: std::time::Duration },
+    TimerDown {
+        total: std::time::Duration,
+    },
     Stopwatch,
     Pomodoro {
         phase: PomodoroPhase,
