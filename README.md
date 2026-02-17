@@ -1,3 +1,3 @@
-zenritme — a quiet terminal timer.
+# zenritme — a quiet terminal timer
 
 Minimal terminal timer, stopwatch, and pomodoro.
