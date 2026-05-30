@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+//
+// Zenritme
+// Copyright (C) 2026 Rezky Nightky
+
 use std::io::{self, Write};
 use std::process::{Command, Stdio};
 

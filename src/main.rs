@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+//
+// Zenritme
+// Copyright (C) 2026 Rezky Nightky
+
 mod cli;
 mod engine;
 mod mode;
