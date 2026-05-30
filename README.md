@@ -2,6 +2,26 @@
 
 Minimal terminal timer, stopwatch, and pomodoro.
 
+## Usage
+
+```
+zenritme --timer-up
+zenritme --timer-down <DURATION>
+zenritme --stopwatch
+zenritme --pomodoro [FOCUS BREAK]
+zenritme --help
+```
+
+Duration format: `30s`, `10m`, `1h`
+
+### Controls
+
+| Key | Action |
+|-----|--------|
+| `q` / `Esc` | Quit |
+| `p` | Pause / resume |
+| `r` | Reset current session |
+
 ## License
 
 Zenritme is licensed under the **GNU General Public License v3.0 only** (`GPL-3.0-only`).

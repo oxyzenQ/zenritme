@@ -3,10 +3,23 @@
 // Zenritme
 // Copyright (C) 2026 Rezky Nightky
 
+use crate::engine::EngineState;
 use crate::mode::{Mode, PomodoroPhase};
 use std::io::{self, Write};
+use std::time::Duration;
 
-pub fn draw(mode: Mode, elapsed: std::time::Duration, remaining: Option<std::time::Duration>) {
+/// Renders the current timer state to stdout.
+///
+/// - `state`    — `Running`, `Paused`, or `Completed`; controls the status label.
+/// - `progress` — `Some(0.0..=1.0)` for bounded modes; `None` for unbounded.
+pub fn draw(
+    mode: Mode,
+    elapsed: Duration,
+    remaining: Option<Duration>,
+    state: EngineState,
+    progress: Option<f32>,
+) {
+    // ── Title ─────────────────────────────────────────────────────────────────
     let title = match mode {
         Mode::TimerUp => "TIMER UP".to_string(),
         Mode::TimerDown { .. } => "TIMER DOWN".to_string(),
@@ -17,35 +30,53 @@ pub fn draw(mode: Mode, elapsed: std::time::Duration, remaining: Option<std::tim
                 PomodoroPhase::Break => "POMODORO BREAK",
             };
             let dyn_idx = emoji.wrapping_add((elapsed.as_secs() / 5) as u8);
-            let emoji_str = pomodoro_emoji(dyn_idx);
-            format!("{} {}", base, emoji_str)
+            format!("{} {}", base, pomodoro_emoji(dyn_idx))
         }
     };
 
+    // ── Primary time display ──────────────────────────────────────────────────
     let primary = match mode {
         Mode::TimerDown { .. } | Mode::Pomodoro { .. } => remaining.unwrap_or_default(),
         _ => elapsed,
     };
-
     let time_str = format_hms(primary);
 
-    let mut lines: Vec<String> = vec!["ZENRITME".to_string(), title, "".to_string(), time_str];
+    // ── Build line list ───────────────────────────────────────────────────────
+    let mut lines: Vec<String> = vec!["ZENRITME".to_string(), title, String::new(), time_str];
 
     match mode {
         Mode::TimerDown { .. } => {
-            lines.push("".to_string());
+            lines.push(String::new());
             lines.push(format!("Elapsed: {}", format_hms(elapsed)));
         }
         Mode::Pomodoro { .. } => {
-            lines.push("".to_string());
+            lines.push(String::new());
             lines.push(format!("Session: {}", format_hms(elapsed)));
         }
         _ => {}
     }
 
+    // ── Progress bar (bounded modes only) ────────────────────────────────────
+    if let Some(p) = progress {
+        lines.push(String::new());
+        lines.push(progress_bar(p, 20));
+    }
+
+    // ── State label ───────────────────────────────────────────────────────────
+    let state_label = match state {
+        EngineState::Paused => Some("[ PAUSED ]"),
+        EngineState::Completed => Some("[ DONE ]"),
+        EngineState::Running => None,
+    };
+    if let Some(label) = state_label {
+        lines.push(String::new());
+        lines.push(label.to_string());
+    }
+
+    // ── Render into a centred box ─────────────────────────────────────────────
     let (cols, rows) = terminal_size();
     let max_inner = cols.saturating_sub(6).max(10);
-    let (boxed, _box_width, _box_height) = boxed_centered(&lines, max_inner, cols, rows);
+    let (boxed, _, _) = boxed_centered(&lines, max_inner, cols, rows);
 
     let mut out = String::new();
     out.push_str("\x1b[2J\x1b[H");
@@ -56,11 +87,32 @@ pub fn draw(mode: Mode, elapsed: std::time::Duration, remaining: Option<std::tim
     let _ = stdout.flush();
 }
 
+// ─── Progress bar ─────────────────────────────────────────────────────────────
+
+/// Returns a fixed-width progress bar string.
+///
+/// `[████████░░░░░░░░░░░░]  42%`
+///
+/// `█` (U+2588) and `░` (U+2591) are each 1 column wide in most terminal fonts.
+fn progress_bar(progress: f32, width: usize) -> String {
+    let filled = ((progress * width as f32).round() as usize).min(width);
+    let empty = width - filled;
+    format!(
+        "[{}{}] {:3.0}%",
+        "█".repeat(filled),
+        "░".repeat(empty),
+        progress * 100.0,
+    )
+}
+
+// ─── Pomodoro emoji ───────────────────────────────────────────────────────────
+
 fn pomodoro_emoji(idx: u8) -> &'static str {
     const EMOJIS: [&str; 10] = ["🍅", "☕", "🌙", "⚡", "🧠", "🎧", "🌿", "📌", "🔥", "🕯️"];
-    let i = (idx as usize) % EMOJIS.len();
-    EMOJIS[i]
+    EMOJIS[(idx as usize) % EMOJIS.len()]
 }
+
+// ─── Display-width helpers ────────────────────────────────────────────────────
 
 fn display_width(s: &str) -> usize {
     s.chars().map(char_display_width).sum()
@@ -71,9 +123,11 @@ fn char_display_width(ch: char) -> usize {
     if u == 0 {
         return 0;
     }
+    // Zero-width joiner and variation selectors
     if u == 0x200D || (0xFE00..=0xFE0F).contains(&u) {
         return 0;
     }
+    // Combining marks
     if (0x0300..=0x036F).contains(&u)
         || (0x1AB0..=0x1AFF).contains(&u)
         || (0x1DC0..=0x1DFF).contains(&u)
@@ -82,7 +136,7 @@ fn char_display_width(ch: char) -> usize {
     {
         return 0;
     }
-
+    // Wide characters (CJK, emoji blocks, …)
     if (0x1100..=0x115F).contains(&u)
         || u == 0x2329
         || u == 0x232A
@@ -99,9 +153,10 @@ fn char_display_width(ch: char) -> usize {
     {
         return 2;
     }
-
     1
 }
+
+// ─── Terminal size ────────────────────────────────────────────────────────────
 
 fn terminal_size() -> (usize, usize) {
     #[cfg(target_os = "linux")]
@@ -110,7 +165,6 @@ fn terminal_size() -> (usize, usize) {
             return (c.max(20), r.max(10));
         }
     }
-
     let cols = std::env::var("COLUMNS")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
@@ -154,6 +208,8 @@ fn terminal_size_linux_ioctl() -> Option<(usize, usize)> {
         None
     }
 }
+
+// ─── Box drawing ──────────────────────────────────────────────────────────────
 
 fn boxed_centered(
     lines: &[String],
@@ -265,7 +321,9 @@ fn wrap_lines(lines: &[String], width: usize) -> Vec<String> {
     out
 }
 
-fn format_hms(d: std::time::Duration) -> String {
+// ─── Time formatting ──────────────────────────────────────────────────────────
+
+fn format_hms(d: Duration) -> String {
     let secs = d.as_secs();
     let h = secs / 3600;
     let m = (secs % 3600) / 60;
