@@ -18,6 +18,15 @@ pub enum Command {
     SoundTest,
 }
 
+/// Pomodoro-specific options extracted during the CLI pre-pass.
+#[derive(Default)]
+struct PomodoroOpts {
+    focus: Option<std::time::Duration>,
+    short_break: Option<std::time::Duration>,
+    long_break: Option<std::time::Duration>,
+    cycles: Option<u32>,
+}
+
 pub fn usage() -> String {
     format!(
         "zenritme v{ver}\n\n\
@@ -29,14 +38,20 @@ pub fn usage() -> String {
          \x20 zenritme --sound-test\n\
          \x20 zenritme --help\n\n\
          Options:\n\
-         \x20 --theme <THEME>   void | ember | aura | forest | mono  (default: void)\n\
-         \x20 --view <VIEW>     minimal | orbit | cinematic            (default: orbit)\n\n\
+         \x20 --theme <THEME>          void | ember | aura | forest | mono  (default: void)\n\
+         \x20 --view <VIEW>            minimal | orbit | cinematic             (default: orbit)\n\
+         \x20 --focus <DURATION>       focus session length                   (default: 25m)\n\
+         \x20 --break <DURATION>       short break length                    (default: 5m)\n\
+         \x20 --long-break <DURATION>  long break length                     (default: 15m)\n\
+         \x20 --cycles <N>             focus sessions per round               (default: 4)\n\n\
          Duration format:\n\
          \x20 <number>s | <number>m | <number>h\n\
          \x20 Examples: 30s  10m  1h\n\n\
          Pomodoro examples:\n\
          \x20 zenritme --pomodoro\n\
-         \x20 zenritme --pomodoro 3s 2s\n\n\
+         \x20 zenritme --pomodoro 3s 2s\n\
+         \x20 zenritme --pomodoro --cycles 4\n\
+         \x20 zenritme --pomodoro --focus 45m --break 10m --long-break 20m --cycles 3\n\n\
          Controls while running:\n\
          \x20 q / Esc   quit\n\
          \x20 p         pause / resume\n\
@@ -45,16 +60,17 @@ pub fn usage() -> String {
     )
 }
 
-/// Parse all arguments. `--theme` and `--view` may appear before or after the mode flag.
+/// Parse all arguments. `--theme`, `--view`, and pomodoro-specific flags are
+/// extracted in a pre-pass so they may appear before or after the mode flag.
 pub fn parse_args<I>(args: I) -> Result<Command, String>
 where
     I: Iterator<Item = String>,
 {
-    // Collect all args so we can do a pre-pass for --theme / --view.
     let all: Vec<String> = args.collect();
 
     let mut theme = Theme::Void;
     let mut view = ViewMode::Orbit;
+    let mut pomodoro_opts = PomodoroOpts::default();
     let mut mode_args: Vec<String> = Vec::new();
     let mut i = 0;
 
@@ -76,6 +92,52 @@ where
                     .ok_or_else(|| format!("unknown view: {}  (see --help)", val))?;
                 i += 2;
             }
+            "--focus" => {
+                let val = all
+                    .get(i + 1)
+                    .ok_or("missing value after --focus".to_string())?;
+                let dur = parse_duration(val)?;
+                if dur.is_zero() {
+                    return Err("--focus duration must be > 0".to_string());
+                }
+                pomodoro_opts.focus = Some(dur);
+                i += 2;
+            }
+            "--break" => {
+                let val = all
+                    .get(i + 1)
+                    .ok_or("missing value after --break".to_string())?;
+                let dur = parse_duration(val)?;
+                if dur.is_zero() {
+                    return Err("--break duration must be > 0".to_string());
+                }
+                pomodoro_opts.short_break = Some(dur);
+                i += 2;
+            }
+            "--long-break" => {
+                let val = all
+                    .get(i + 1)
+                    .ok_or("missing value after --long-break".to_string())?;
+                let dur = parse_duration(val)?;
+                if dur.is_zero() {
+                    return Err("--long-break duration must be > 0".to_string());
+                }
+                pomodoro_opts.long_break = Some(dur);
+                i += 2;
+            }
+            "--cycles" => {
+                let val = all
+                    .get(i + 1)
+                    .ok_or("missing value after --cycles".to_string())?;
+                let n: u32 = val
+                    .parse()
+                    .map_err(|_| "--cycles must be a positive integer".to_string())?;
+                if n == 0 {
+                    return Err("--cycles must be > 0".to_string());
+                }
+                pomodoro_opts.cycles = Some(n);
+                i += 2;
+            }
             _ => {
                 mode_args.push(all[i].clone());
                 i += 1;
@@ -83,11 +145,16 @@ where
         }
     }
 
-    parse_mode(mode_args.into_iter(), theme, view)
+    parse_mode(mode_args.into_iter(), theme, view, pomodoro_opts)
 }
 
-/// Parse the mode-specific arguments (after --theme/--view extraction).
-fn parse_mode<I>(mut args: I, theme: Theme, view: ViewMode) -> Result<Command, String>
+/// Parse the mode-specific arguments (after pre-pass extraction).
+fn parse_mode<I>(
+    mut args: I,
+    theme: Theme,
+    view: ViewMode,
+    pomo: PomodoroOpts,
+) -> Result<Command, String>
 where
     I: Iterator<Item = String>,
 {
@@ -126,10 +193,16 @@ where
 
         "--pomodoro" => {
             let default_focus = std::time::Duration::from_secs(25 * 60);
-            let default_break = std::time::Duration::from_secs(5 * 60);
+            let default_short_break = std::time::Duration::from_secs(5 * 60);
+            let default_long_break = std::time::Duration::from_secs(15 * 60);
+            let default_cycles: u32 = 4;
 
+            // Check for positional FOCUS BREAK (legacy syntax)
             let (focus, short_break) = match args.next() {
-                None => (default_focus, default_break),
+                None => (
+                    pomo.focus.unwrap_or(default_focus),
+                    pomo.short_break.unwrap_or(default_short_break),
+                ),
                 Some(focus_str) => {
                     let Some(break_str) = args.next() else {
                         return Err("missing BREAK after --pomodoro FOCUS".to_string());
@@ -144,11 +217,17 @@ where
                 }
             };
 
+            let long_break = pomo.long_break.unwrap_or(default_long_break);
+            let cycles = pomo.cycles.unwrap_or(default_cycles);
+
             Ok(Command::Run {
                 mode: Mode::Pomodoro {
                     phase: PomodoroPhase::Focus,
                     focus,
                     short_break,
+                    long_break,
+                    cycles,
+                    current_cycle: 1,
                     emoji: pick_pomodoro_emoji(),
                 },
                 theme,
@@ -459,5 +538,228 @@ mod tests {
         } else {
             panic!("expected Run");
         }
+    }
+
+    // ── Pomodoro Masterclass CLI ──────────────────────────────────────────────
+
+    /// Helper: extract the Pomodoro fields from a parsed Command.
+    fn pomodoro_fields(
+        cmd: Command,
+    ) -> (
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+        u32,
+    ) {
+        if let Command::Run {
+            mode:
+                Mode::Pomodoro {
+                    focus,
+                    short_break,
+                    long_break,
+                    cycles,
+                    ..
+                },
+            ..
+        } = cmd
+        {
+            return (focus, short_break, long_break, cycles);
+        }
+        panic!("expected Pomodoro Run command");
+    }
+
+    #[test]
+    fn pomodoro_defaults() {
+        let cmd = parse_args(args(&["--pomodoro"])).unwrap();
+        let (focus, short_break, long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(focus, std::time::Duration::from_secs(25 * 60));
+        assert_eq!(short_break, std::time::Duration::from_secs(5 * 60));
+        assert_eq!(long_break, std::time::Duration::from_secs(15 * 60));
+        assert_eq!(cycles, 4);
+    }
+
+    #[test]
+    fn pomodoro_old_syntax_still_works() {
+        let cmd = parse_args(args(&["--pomodoro", "3s", "2s"])).unwrap();
+        let (focus, short_break, long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(focus, std::time::Duration::from_secs(3));
+        assert_eq!(short_break, std::time::Duration::from_secs(2));
+        // long_break and cycles should be defaults when using old syntax
+        assert_eq!(long_break, std::time::Duration::from_secs(15 * 60));
+        assert_eq!(cycles, 4);
+    }
+
+    #[test]
+    fn pomodoro_focus_flag() {
+        let cmd = parse_args(args(&["--pomodoro", "--focus", "45m"])).unwrap();
+        let (focus, short_break, long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(focus, std::time::Duration::from_secs(45 * 60));
+        assert_eq!(short_break, std::time::Duration::from_secs(5 * 60));
+        assert_eq!(long_break, std::time::Duration::from_secs(15 * 60));
+        assert_eq!(cycles, 4);
+    }
+
+    #[test]
+    fn pomodoro_break_flag() {
+        let cmd = parse_args(args(&["--pomodoro", "--break", "10m"])).unwrap();
+        let (_focus, short_break, _long_break, _cycles) = pomodoro_fields(cmd);
+        assert_eq!(short_break, std::time::Duration::from_secs(10 * 60));
+    }
+
+    #[test]
+    fn pomodoro_long_break_flag() {
+        let cmd = parse_args(args(&["--pomodoro", "--long-break", "20m"])).unwrap();
+        let (_focus, _short_break, long_break, _cycles) = pomodoro_fields(cmd);
+        assert_eq!(long_break, std::time::Duration::from_secs(20 * 60));
+    }
+
+    #[test]
+    fn pomodoro_cycles_flag() {
+        let cmd = parse_args(args(&["--pomodoro", "--cycles", "3"])).unwrap();
+        let (_focus, _short_break, _long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(cycles, 3);
+    }
+
+    #[test]
+    fn pomodoro_all_flags_combined() {
+        let cmd = parse_args(args(&[
+            "--pomodoro",
+            "--focus",
+            "45m",
+            "--break",
+            "10m",
+            "--long-break",
+            "20m",
+            "--cycles",
+            "3",
+        ]))
+        .unwrap();
+        let (focus, short_break, long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(focus, std::time::Duration::from_secs(45 * 60));
+        assert_eq!(short_break, std::time::Duration::from_secs(10 * 60));
+        assert_eq!(long_break, std::time::Duration::from_secs(20 * 60));
+        assert_eq!(cycles, 3);
+    }
+
+    #[test]
+    fn pomodoro_flags_with_theme_and_view() {
+        let cmd = parse_args(args(&[
+            "--pomodoro",
+            "--focus",
+            "3s",
+            "--break",
+            "2s",
+            "--long-break",
+            "4s",
+            "--cycles",
+            "2",
+            "--theme",
+            "aura",
+            "--view",
+            "cinematic",
+        ]))
+        .unwrap();
+        if let Command::Run { mode, theme, view } = cmd {
+            if let Mode::Pomodoro {
+                focus,
+                short_break,
+                long_break,
+                cycles,
+                ..
+            } = mode
+            {
+                assert_eq!(focus, std::time::Duration::from_secs(3));
+                assert_eq!(short_break, std::time::Duration::from_secs(2));
+                assert_eq!(long_break, std::time::Duration::from_secs(4));
+                assert_eq!(cycles, 2);
+            } else {
+                panic!("expected Pomodoro");
+            }
+            assert_eq!(theme, Theme::Aura);
+            assert_eq!(view, ViewMode::Cinematic);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn pomodoro_old_syntax_with_long_break_override() {
+        let cmd = parse_args(args(&[
+            "--pomodoro",
+            "3s",
+            "2s",
+            "--long-break",
+            "4s",
+            "--cycles",
+            "2",
+        ]))
+        .unwrap();
+        let (focus, short_break, long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(focus, std::time::Duration::from_secs(3));
+        assert_eq!(short_break, std::time::Duration::from_secs(2));
+        assert_eq!(long_break, std::time::Duration::from_secs(4));
+        assert_eq!(cycles, 2);
+    }
+
+    // ── Pomodoro error cases ──────────────────────────────────────────────────
+
+    #[test]
+    fn pomodoro_missing_focus_value() {
+        assert!(parse_args(args(&["--pomodoro", "--focus"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_missing_break_value() {
+        assert!(parse_args(args(&["--pomodoro", "--break"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_missing_long_break_value() {
+        assert!(parse_args(args(&["--pomodoro", "--long-break"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_missing_cycles_value() {
+        assert!(parse_args(args(&["--pomodoro", "--cycles"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_zero_cycles_rejected() {
+        assert!(parse_args(args(&["--pomodoro", "--cycles", "0"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_invalid_cycles_rejected() {
+        assert!(parse_args(args(&["--pomodoro", "--cycles", "abc"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_zero_focus_rejected() {
+        assert!(parse_args(args(&["--pomodoro", "--focus", "0s"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_zero_break_rejected() {
+        assert!(parse_args(args(&["--pomodoro", "--break", "0s"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_zero_long_break_rejected() {
+        assert!(parse_args(args(&["--pomodoro", "--long-break", "0s"])).is_err());
+    }
+
+    #[test]
+    fn pomodoro_cycles_can_be_one() {
+        let cmd = parse_args(args(&["--pomodoro", "--cycles", "1"])).unwrap();
+        let (_focus, _short_break, _long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(cycles, 1);
+    }
+
+    #[test]
+    fn pomodoro_flags_before_mode() {
+        let cmd = parse_args(args(&["--focus", "3s", "--cycles", "2", "--pomodoro"])).unwrap();
+        let (focus, _short_break, _long_break, cycles) = pomodoro_fields(cmd);
+        assert_eq!(focus, std::time::Duration::from_secs(3));
+        assert_eq!(cycles, 2);
     }
 }

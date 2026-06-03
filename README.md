@@ -23,6 +23,25 @@ zenritme --help
 
 Duration format: `30s`, `10m`, `1h`
 
+### Pomodoro Masterclass
+
+```sh
+zenritme --pomodoro                                    # defaults: 25m focus, 5m break, 15m long break, 4 cycles
+zenritme --pomodoro 3s 2s                              # legacy positional syntax
+zenritme --pomodoro --cycles 4                         # custom cycle count
+zenritme --pomodoro --focus 45m --break 10m --long-break 20m --cycles 3
+zenritme --pomodoro --focus 3s --break 2s --long-break 4s --cycles 2 --theme aura --view cinematic
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--focus` | `25m` | Focus session length |
+| `--break` | `5m` | Short break length |
+| `--long-break` | `15m` | Long break (after final focus cycle) |
+| `--cycles` | `4` | Focus sessions per round |
+
+Session flow: FOCUS 1/N → SHORT BREAK 1/N → … → FOCUS N/N → LONG BREAK → COMPLETE
+
 ### Controls
 
 | Key | Action |

@@ -74,11 +74,13 @@ pub fn compute_progress(engine: &crate::engine::Engine) -> Option<f32> {
             phase,
             focus,
             short_break,
+            long_break,
             ..
         } => {
             let phase_total = match phase {
                 PomodoroPhase::Focus => focus,
-                PomodoroPhase::Break => short_break,
+                PomodoroPhase::ShortBreak => short_break,
+                PomodoroPhase::LongBreak => long_break,
             };
             let remaining = engine.remaining()?;
             if phase_total.is_zero() {
@@ -201,10 +203,22 @@ fn build_title(state: &RenderState) -> String {
         Mode::TimerUp => "TIMER UP".to_string(),
         Mode::TimerDown { .. } => "TIMER DOWN".to_string(),
         Mode::Stopwatch => "STOPWATCH".to_string(),
-        Mode::Pomodoro { phase, emoji, .. } => {
-            let base = match phase {
-                PomodoroPhase::Focus => "POMODORO FOCUS",
-                PomodoroPhase::Break => "POMODORO BREAK",
+        Mode::Pomodoro {
+            phase,
+            cycles,
+            current_cycle,
+            emoji,
+            ..
+        } => {
+            let base = match state.state {
+                EngineState::Completed => "COMPLETE".to_string(),
+                _ => match phase {
+                    PomodoroPhase::Focus => format!("FOCUS {}/{}", current_cycle, cycles),
+                    PomodoroPhase::ShortBreak => {
+                        format!("SHORT BREAK {}/{}", current_cycle, cycles)
+                    }
+                    PomodoroPhase::LongBreak => "LONG BREAK".to_string(),
+                },
             };
             let dyn_idx = emoji.wrapping_add((state.elapsed.as_secs() / 5) as u8);
             format!("{} {}", base, pomodoro_emoji(dyn_idx))

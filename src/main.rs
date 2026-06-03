@@ -85,10 +85,12 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode) {
                     phase,
                     focus,
                     short_break,
+                    long_break,
                     ..
                 } => Some(match phase {
                     PomodoroPhase::Focus => focus,
-                    PomodoroPhase::Break => short_break,
+                    PomodoroPhase::ShortBreak => short_break,
+                    PomodoroPhase::LongBreak => long_break,
                 }),
                 _ => None,
             },

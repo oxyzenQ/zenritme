@@ -77,3 +77,70 @@ rich animations — all built on zero external dependencies.
 Stage Summary:
 - Release notes document covers all v1.2.0 changes
 - All invariants verified and preserved
+
+---
+Task ID: 3
+Agent: main
+Task: Implement Zenritme v1.3.0 — Pomodoro Masterclass
+
+## Release Notes — Zenritme v1.3.0
+
+### Pomodoro Masterclass
+
+Zenritme v1.3.0 upgrades Pomodoro mode into a full focus ritual with
+configurable sessions, long breaks, cycle tracking, and cycle-aware UI labels.
+
+### New features
+
+- **Long break phase**: after the final focus cycle, a dedicated long break
+  (default 15m) replaces the short break, providing a proper rest interval
+- **Cycle tracking**: the UI displays FOCUS 1/4, SHORT BREAK 1/4, LONG BREAK,
+  and COMPLETE labels throughout the session
+- **Configurable cycles**: `--cycles <N>` sets the number of focus sessions
+  per round (default: 4)
+- **Full CLI control**: `--focus`, `--break`, `--long-break`, `--cycles`
+  flags may appear before or after `--pomodoro`
+- **Backward compatible**: legacy `--pomodoro <FOCUS> <BREAK>` syntax still works
+
+### Session flow
+
+FOCUS 1/N → SHORT BREAK 1/N → FOCUS 2/N → SHORT BREAK 2/N → … →
+FOCUS N/N → LONG BREAK → COMPLETE
+
+### New CLI options
+
+- `--focus <DURATION>` — focus session length (default: 25m)
+- `--break <DURATION>` — short break length (default: 5m)
+- `--long-break <DURATION>` — long break length (default: 15m)
+- `--cycles <N>` — focus sessions per round (default: 4)
+
+### Architecture changes
+
+- `PomodoroPhase` enum: renamed `Break` to `ShortBreak`, added `LongBreak`
+- `Mode::Pomodoro` variant: added `long_break`, `cycles`, `current_cycle` fields
+- `engine.rs`: full Pomodoro state machine with cycle-aware transitions
+- `cli.rs`: `PomodoroOpts` struct for pre-pass extraction of new flags
+- `render.rs`: cycle-aware labels in `build_title` with COMPLETE state handling
+
+### Preserved invariants
+
+- Zero external dependencies
+- LOC guard: all 9 source files under 1000 LOC
+- main.rs stays as bootstrap/wiring only
+- All v1.2.0 themes, views, and controls preserved
+- Old `--pomodoro [FOCUS BREAK]` behavior preserved
+
+### Tests
+
+- Test count increased from 58 (v1.2.0) to 85
+- New CLI tests: default config, all 4 flags, combined flags, flags with theme/view,
+  old syntax compatibility, missing values, zero values, invalid values
+- New engine tests: focus→short break, short break→next focus, final focus→long break,
+  long break→completed, single cycle, pause during pomodoro, reset to focus 1/N,
+  completed no double event
+
+Stage Summary:
+- 85 tests all pass
+- All v1.2.0 invariants preserved
+- Zero dependencies maintained
+- No git tag created

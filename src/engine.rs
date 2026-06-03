@@ -81,7 +81,7 @@ impl Engine {
     }
 
     /// Resets the session back to its initial state (clears all accumulators,
-    /// sets state to `Running`, and rewinds Pomodoro to the Focus phase).
+    /// sets state to `Running`, and rewinds Pomodoro to Focus 1/N).
     pub fn reset(&mut self) {
         let now = Instant::now();
         self.session_start = now;
@@ -92,10 +92,12 @@ impl Engine {
         self.state = EngineState::Running;
         self.event = None;
 
-        // Rewind Pomodoro to Focus phase.
+        // Rewind Pomodoro to Focus phase, cycle 1.
         if let Mode::Pomodoro {
             focus,
             short_break,
+            long_break,
+            cycles,
             emoji,
             ..
         } = self.mode
@@ -104,6 +106,9 @@ impl Engine {
                 phase: PomodoroPhase::Focus,
                 focus,
                 short_break,
+                long_break,
+                cycles,
+                current_cycle: 1,
                 emoji,
             };
         }
@@ -127,25 +132,47 @@ impl Engine {
                 phase,
                 focus,
                 short_break,
+                long_break,
+                cycles,
+                current_cycle,
                 emoji,
             } => {
                 let phase_total = match phase {
                     PomodoroPhase::Focus => focus,
-                    PomodoroPhase::Break => short_break,
+                    PomodoroPhase::ShortBreak => short_break,
+                    PomodoroPhase::LongBreak => long_break,
                 };
 
                 if self.phase_elapsed() >= phase_total {
-                    let next_phase = match phase {
-                        PomodoroPhase::Focus => PomodoroPhase::Break,
-                        PomodoroPhase::Break => PomodoroPhase::Focus,
+                    // Long break complete → session done
+                    if phase == PomodoroPhase::LongBreak {
+                        self.state = EngineState::Completed;
+                        if self.event.is_none() {
+                            self.event = Some(EngineEvent::Completed);
+                        }
+                        return;
+                    }
+
+                    let (next_phase, next_cycle) = match phase {
+                        PomodoroPhase::Focus if current_cycle >= cycles => {
+                            (PomodoroPhase::LongBreak, current_cycle)
+                        }
+                        PomodoroPhase::Focus => (PomodoroPhase::ShortBreak, current_cycle),
+                        PomodoroPhase::ShortBreak => {
+                            (PomodoroPhase::Focus, current_cycle.saturating_add(1))
+                        }
+                        PomodoroPhase::LongBreak => unreachable!(),
                     };
-                    // Start fresh phase; reset phase-level pause accumulator.
+
                     self.phase_start = Instant::now();
                     self.phase_paused = Duration::ZERO;
                     self.mode = Mode::Pomodoro {
                         phase: next_phase,
                         focus,
                         short_break,
+                        long_break,
+                        cycles,
+                        current_cycle: next_cycle,
                         emoji,
                     };
                     if self.event.is_none() {
@@ -189,11 +216,13 @@ impl Engine {
                 phase,
                 focus,
                 short_break,
+                long_break,
                 ..
             } => {
                 let phase_total = match phase {
                     PomodoroPhase::Focus => focus,
-                    PomodoroPhase::Break => short_break,
+                    PomodoroPhase::ShortBreak => short_break,
+                    PomodoroPhase::LongBreak => long_break,
                 };
                 Some(phase_total.saturating_sub(self.phase_elapsed()))
             }
@@ -204,6 +233,12 @@ impl Engine {
     /// Takes the pending event, leaving `None` behind.
     pub fn take_event(&mut self) -> Option<EngineEvent> {
         self.event.take()
+    }
+
+    /// Expose phase_elapsed for testing.
+    #[cfg(test)]
+    fn phase_elapsed_internal(&self) -> Duration {
+        self.phase_elapsed()
     }
 }
 
@@ -226,13 +261,21 @@ mod tests {
         })
     }
 
-    fn pomodoro_ms(focus_ms: u64, break_ms: u64) -> Engine {
+    fn pomodoro_ms(focus_ms: u64, break_ms: u64, long_break_ms: u64, cycles: u32) -> Engine {
         Engine::new(Mode::Pomodoro {
             phase: PomodoroPhase::Focus,
             focus: Duration::from_millis(focus_ms),
             short_break: Duration::from_millis(break_ms),
+            long_break: Duration::from_millis(long_break_ms),
+            cycles,
+            current_cycle: 1,
             emoji: 0,
         })
+    }
+
+    /// Convenience: 2-cycle pomodoro with generous phase durations.
+    fn pomodoro_2cycle() -> Engine {
+        pomodoro_ms(1, 1, 1, 2)
     }
 
     // ── Timer-down ────────────────────────────────────────────────────────────
@@ -256,22 +299,130 @@ mod tests {
         assert_eq!(e.take_event(), None);
     }
 
-    // ── Pomodoro ──────────────────────────────────────────────────────────────
+    // ── Pomodoro: focus → short break ──────────────────────────────────────────
 
     #[test]
-    fn pomodoro_phase_switch() {
-        let mut e = pomodoro_ms(1, 10_000);
+    fn pomodoro_focus_to_short_break() {
+        let mut e = pomodoro_2cycle();
         std::thread::sleep(Duration::from_millis(20));
-        e.tick();
+        e.tick(); // focus expires → short break
         assert_eq!(e.take_event(), Some(EngineEvent::PhaseSwitched));
-        if let Mode::Pomodoro { phase, .. } = e.mode() {
-            assert!(
-                matches!(phase, PomodoroPhase::Break),
-                "expected Break phase after focus expires"
+        if let Mode::Pomodoro {
+            phase,
+            current_cycle,
+            ..
+        } = e.mode()
+        {
+            assert_eq!(phase, PomodoroPhase::ShortBreak);
+            assert_eq!(
+                current_cycle, 1,
+                "cycle should still be 1 during short break"
             );
         } else {
             panic!("expected Pomodoro mode");
         }
+    }
+
+    // ── Pomodoro: short break → next focus ────────────────────────────────────
+
+    #[test]
+    fn pomodoro_short_break_to_next_focus() {
+        let mut e = pomodoro_2cycle();
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // focus 1 → short break 1
+        let _ = e.take_event();
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // short break 1 → focus 2
+        assert_eq!(e.take_event(), Some(EngineEvent::PhaseSwitched));
+        if let Mode::Pomodoro {
+            phase,
+            current_cycle,
+            ..
+        } = e.mode()
+        {
+            assert_eq!(phase, PomodoroPhase::Focus);
+            assert_eq!(current_cycle, 2, "cycle should advance to 2");
+        } else {
+            panic!("expected Pomodoro mode");
+        }
+    }
+
+    // ── Pomodoro: final focus → long break ─────────────────────────────────────
+
+    #[test]
+    fn pomodoro_final_focus_to_long_break() {
+        let mut e = pomodoro_2cycle();
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // focus 1 → short break
+        let _ = e.take_event();
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // short break → focus 2 (final)
+        let _ = e.take_event();
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // focus 2 (final) → long break
+        assert_eq!(e.take_event(), Some(EngineEvent::PhaseSwitched));
+        if let Mode::Pomodoro {
+            phase,
+            current_cycle,
+            ..
+        } = e.mode()
+        {
+            assert_eq!(phase, PomodoroPhase::LongBreak);
+            assert_eq!(current_cycle, 2, "cycle should remain 2 during long break");
+        } else {
+            panic!("expected Pomodoro mode");
+        }
+    }
+
+    // ── Pomodoro: long break → completed ───────────────────────────────────────
+
+    #[test]
+    fn pomodoro_long_break_to_completed() {
+        let mut e = pomodoro_2cycle();
+        // Advance through: focus 1 → short break → focus 2 → long break
+        for _ in 0..3 {
+            std::thread::sleep(Duration::from_millis(20));
+            e.tick();
+            let _ = e.take_event();
+        }
+        // Now in long break, let it expire
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick();
+        assert_eq!(e.state(), EngineState::Completed);
+        assert_eq!(e.take_event(), Some(EngineEvent::Completed));
+    }
+
+    // ── Pomodoro: single cycle (focus → long break → completed) ──────────────
+
+    #[test]
+    fn pomodoro_single_cycle_focus_to_long_break() {
+        let mut e = pomodoro_ms(1, 5_000, 1, 1);
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // focus → long break (skipping short break for cycles=1)
+        assert_eq!(e.take_event(), Some(EngineEvent::PhaseSwitched));
+        if let Mode::Pomodoro {
+            phase,
+            current_cycle,
+            ..
+        } = e.mode()
+        {
+            assert_eq!(phase, PomodoroPhase::LongBreak);
+            assert_eq!(current_cycle, 1);
+        } else {
+            panic!("expected Pomodoro mode");
+        }
+    }
+
+    #[test]
+    fn pomodoro_single_cycle_to_completed() {
+        let mut e = pomodoro_ms(1, 5_000, 1, 1);
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // focus → long break
+        let _ = e.take_event();
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick(); // long break → completed
+        assert_eq!(e.state(), EngineState::Completed);
+        assert_eq!(e.take_event(), Some(EngineEvent::Completed));
     }
 
     // ── Pause / resume ────────────────────────────────────────────────────────
@@ -322,6 +473,22 @@ mod tests {
         assert_eq!(e.state(), EngineState::Completed);
     }
 
+    #[test]
+    fn pomodoro_pause_does_not_advance() {
+        let mut e = pomodoro_2cycle();
+        e.toggle_pause();
+        std::thread::sleep(Duration::from_millis(30));
+        e.tick(); // no-op while paused
+        assert_eq!(e.state(), EngineState::Paused);
+        e.toggle_pause();
+        // After unpausing, phase_elapsed should be tiny
+        assert!(
+            e.phase_elapsed_internal() < Duration::from_millis(5),
+            "phase_elapsed was {:?}",
+            e.phase_elapsed_internal()
+        );
+    }
+
     // ── Reset ─────────────────────────────────────────────────────────────────
 
     #[test]
@@ -352,18 +519,46 @@ mod tests {
     }
 
     #[test]
-    fn pomodoro_reset_goes_back_to_focus() {
-        let mut e = pomodoro_ms(1, 10_000);
+    fn pomodoro_reset_returns_to_focus_1() {
+        let mut e = pomodoro_2cycle();
+        // Advance to short break (cycle 1)
         std::thread::sleep(Duration::from_millis(20));
-        e.tick(); // triggers PhaseSwitched → now in Break
+        e.tick();
+        let _ = e.take_event();
+        // Advance to focus 2
+        std::thread::sleep(Duration::from_millis(20));
+        e.tick();
+        let _ = e.take_event();
+        // Now reset
         e.reset();
-        if let Mode::Pomodoro { phase, .. } = e.mode() {
-            assert!(
-                matches!(phase, PomodoroPhase::Focus),
-                "reset should rewind Pomodoro to Focus"
-            );
+        assert_eq!(e.state(), EngineState::Running);
+        if let Mode::Pomodoro {
+            phase,
+            current_cycle,
+            cycles,
+            ..
+        } = e.mode()
+        {
+            assert_eq!(phase, PomodoroPhase::Focus);
+            assert_eq!(current_cycle, 1, "reset should return to cycle 1");
+            assert_eq!(cycles, 2, "cycles count should be preserved");
         } else {
             panic!("expected Pomodoro mode after reset");
         }
+    }
+
+    #[test]
+    fn pomodoro_completed_no_double_event() {
+        let mut e = pomodoro_2cycle();
+        // Advance through all phases to completion
+        for _ in 0..4 {
+            std::thread::sleep(Duration::from_millis(20));
+            e.tick();
+            let _ = e.take_event();
+        }
+        assert_eq!(e.state(), EngineState::Completed);
+        // Extra tick should not re-emit
+        e.tick();
+        assert_eq!(e.take_event(), None);
     }
 }
