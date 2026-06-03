@@ -30,8 +30,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.92.0
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 

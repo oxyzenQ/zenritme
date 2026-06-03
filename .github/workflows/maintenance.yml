@@ -1,0 +1,102 @@
+---
+name: Maintenance
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  auto-update:
+    name: Update toolchain and dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      CARGO_TERM_COLOR: always
+      GIT_AUTHOR_NAME: oxyzenQ
+      GIT_AUTHOR_EMAIL: 130107241+oxyzenQ@users.noreply.github.com
+      GIT_COMMITTER_NAME: oxyzenQ
+      GIT_COMMITTER_EMAIL: 130107241+oxyzenQ@users.noreply.github.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-maint-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-maint-
+
+      # ── Update toolchain reference ────────────────────────────────────────
+      - name: Update toolchain version in workflows
+        run: |
+          set -euo pipefail
+          STABLE=$(rustup show active-toolchain | sed 's/ .*//')
+          echo "Detected stable toolchain: ${STABLE}"
+          for wf in .github/workflows/*.yml; do
+            if grep -q 'dtolnay/rust-toolchain@' "$wf"; then
+              CURRENT=$(grep 'dtolnay/rust-toolchain@' "$wf" | head -1 | sed 's/.*dtolnay\/rust-toolchain@\([^"]*\).*/\1/')
+              if [ "${CURRENT}" = "stable" ]; then
+                echo "  ${wf}: already uses @stable, skipping"
+              else
+                echo "  ${wf}: updating @${CURRENT} -> @stable"
+                sed -i "s|dtolnay/rust-toolchain@${CURRENT}|dtolnay/rust-toolchain@stable|g" "$wf"
+              fi
+            fi
+          done
+
+      # ── Update dependencies ───────────────────────────────────────────────
+      - name: Update Cargo.lock
+        run: cargo update 2>&1
+
+      # ── Self-heal: auto-fix formatting ────────────────────────────────────
+      - name: Auto-fix formatting
+        run: |
+          if ! cargo fmt --all -- --check 2>/dev/null; then
+            echo "Formatting issues detected — applying cargo fmt"
+            cargo fmt --all
+          fi
+
+      # ── Validate ─────────────────────────────────────────────────────────
+      - name: Run tests
+        run: cargo test
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: LOC guard
+        run: bash scripts/check-loc.sh
+
+      # ── Commit and push if changed ───────────────────────────────────────
+      - name: Commit and push changes
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to update — already up to date"
+          else
+            CHANGES=$(git diff --cached --stat)
+            echo "Changes detected:"
+            echo "${CHANGES}"
+            git commit -m "chore: weekly auto-update toolchain and dependencies"
+            git push origin main
+          fi
