@@ -19,9 +19,21 @@ zenritme --timer-down <DURATION>
 zenritme --stopwatch
 zenritme --pomodoro [FOCUS BREAK]
 zenritme --help
+zenritme -V, --version
 ```
 
 Duration format: `30s`, `10m`, `1h`
+
+### Version output
+
+```sh
+$ zenritme -V
+Version: v1.3.0
+Build: linux-x86_64 (1e6791d)
+Copyright: (c) 2026 Rezky_nightky
+License: GPL-3.0-only
+Source: https://github.com/oxyzenQ/zenritme
+```
 
 ### Pomodoro Masterclass
 

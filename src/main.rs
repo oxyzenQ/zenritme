@@ -11,6 +11,7 @@ mod render;
 mod sound;
 mod terminal;
 mod theme;
+mod version;
 
 use mode::PomodoroPhase;
 use std::sync::mpsc;
@@ -28,6 +29,9 @@ fn main() {
     match cmd {
         cli::Command::Help => {
             println!("{}", cli::usage());
+        }
+        cli::Command::Version => {
+            println!("{}", version::version_report());
         }
         cli::Command::SoundTest => {
             sound::sound_test();

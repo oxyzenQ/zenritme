@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub enum Command {
     Help,
+    Version,
     Run {
         mode: Mode,
         theme: Theme,
@@ -36,7 +37,8 @@ pub fn usage() -> String {
          \x20 zenritme --stopwatch\n\
          \x20 zenritme --pomodoro [FOCUS BREAK]\n\
          \x20 zenritme --sound-test\n\
-         \x20 zenritme --help\n\n\
+         \x20 zenritme --help\n\
+         \x20 zenritme -V, --version\n\n\
          Options:\n\
          \x20 --theme <THEME>          void | ember | aura | forest | mono  (default: void)\n\
          \x20 --view <VIEW>            minimal | orbit | cinematic             (default: orbit)\n\
@@ -166,6 +168,11 @@ where
         "--help" | "-h" => {
             reject_extra(&mut args, "--help")?;
             Ok(Command::Help)
+        }
+
+        "-V" | "--version" => {
+            reject_extra(&mut args, "--version")?;
+            Ok(Command::Version)
         }
 
         "--sound-test" => {
@@ -385,6 +392,12 @@ mod tests {
     }
 
     #[test]
+    fn extra_args_version() {
+        assert!(parse_args(args(&["--version", "extra"])).is_err());
+        assert!(parse_args(args(&["-V", "extra"])).is_err());
+    }
+
+    #[test]
     fn extra_args_stopwatch() {
         assert!(parse_args(args(&["--stopwatch", "extra"])).is_err());
     }
@@ -411,6 +424,19 @@ mod tests {
     }
 
     // ── Valid cases ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn version_flag_long() {
+        assert!(matches!(
+            parse_args(args(&["--version"])),
+            Ok(Command::Version)
+        ));
+    }
+
+    #[test]
+    fn version_flag_short() {
+        assert!(matches!(parse_args(args(&["-V"])), Ok(Command::Version)));
+    }
 
     #[test]
     fn no_args_shows_help() {
