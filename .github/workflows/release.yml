@@ -1,0 +1,160 @@
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# Zenritme
+# Copyright (C) 2026 Rezky Nightky
+
+---
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 30
+
+    env:
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.92.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      # ── Safety gates ─────────────────────────────────────────────────────
+
+      - name: Validate tag version
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CARGO_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "Tag version:    ${TAG_VERSION}"
+          echo "Cargo.toml:     ${CARGO_VERSION}"
+          if [ "${TAG_VERSION}" != "${CARGO_VERSION}" ]; then
+            echo "::error::Tag version '${TAG_VERSION}' does not match Cargo.toml version '${CARGO_VERSION}'"
+            exit 1
+          fi
+          echo "VERSION=${TAG_VERSION}" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: LOC guard
+        run: bash scripts/check-loc.sh
+        shell: bash
+
+      # ── Build ──────────────────────────────────────────────────────────
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          HELP_OUTPUT=$(./target/release/zenritme --help)
+          echo "${HELP_OUTPUT}"
+          if ! echo "${HELP_OUTPUT}" | head -1 | grep -q "zenritme v${VERSION}"; then
+            echo "::error::--help output does not include expected version 'zenritme v${VERSION}'"
+            exit 1
+          fi
+        shell: bash
+
+      # ── Package ────────────────────────────────────────────────────────
+
+      - name: Package release archive
+        run: |
+          set -euo pipefail
+          ARCHIVE_NAME="zenritme-v${VERSION}-x86_64-unknown-linux-gnu"
+          STAGING="${ARCHIVE_NAME}"
+          mkdir -p "${STAGING}"
+          cp target/release/zenritme     "${STAGING}/"
+          cp README.md                    "${STAGING}/"
+          cp LICENSE                      "${STAGING}/"
+          cp NOTICE.md                    "${STAGING}/"
+          cp RULES.md                     "${STAGING}/"
+          cp docs/SECURITY.md             "${STAGING}/docs/"
+          cp docs/ENDURANCE.md            "${STAGING}/docs/"
+          tar czf "${ARCHIVE_NAME}.tar.gz" "${STAGING}"
+          echo "ARCHIVE=${ARCHIVE_NAME}.tar.gz" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Generate SHA256 checksums
+        run: |
+          set -euo pipefail
+          sha256sum "${ARCHIVE}" > SHA256SUMS
+          echo "Checksum:"
+          cat SHA256SUMS
+        shell: bash
+
+      # ── Release ──────────────────────────────────────────────────────────
+
+      - name: Generate release body
+        run: |
+          cat > release-notes.md << 'BODY'
+          ## Highlights
+
+          - Premium terminal UI with themed rendering
+          - 5 themes: void, ember, aura, forest, mono
+          - 3 view modes: minimal, orbit, cinematic
+          - NO_COLOR support (per no-color.org)
+          - Zero external Rust dependencies
+          - LOC guard enforced (all files under 1000 lines)
+          - 58 tests, zero warnings
+
+          ## Install
+
+          ```sh
+          tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
+          sudo install zenritme-vVERSION-x86_64-unknown-linux-gnu/zenritme /usr/local/bin/
+          ```
+
+          ## Assets
+
+          - `zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz` — release binary + docs
+          - `SHA256SUMS` — checksums
+          BODY
+          sed -i "s/VERSION/${VERSION}/g" release-notes.md
+        shell: bash
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Zenritme v${{ env.VERSION }}"
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.ARCHIVE }}
+            SHA256SUMS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
