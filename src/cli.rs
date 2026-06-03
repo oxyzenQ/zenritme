@@ -197,13 +197,21 @@ where
             let default_long_break = std::time::Duration::from_secs(15 * 60);
             let default_cycles: u32 = 4;
 
-            // Check for positional FOCUS BREAK (legacy syntax)
+            // Check for positional FOCUS BREAK (legacy syntax).
+            // If --focus or --break were already used via options, positional args
+            // are ambiguous and must be rejected with a clear message.
             let (focus, short_break) = match args.next() {
                 None => (
                     pomo.focus.unwrap_or(default_focus),
                     pomo.short_break.unwrap_or(default_short_break),
                 ),
                 Some(focus_str) => {
+                    if pomo.focus.is_some() || pomo.short_break.is_some() {
+                        return Err(format!(
+                            "unexpected argument '{}' (positional FOCUS BREAK conflicts with --focus/--break options)",
+                            focus_str
+                        ));
+                    }
                     let Some(break_str) = args.next() else {
                         return Err("missing BREAK after --pomodoro FOCUS".to_string());
                     };
@@ -761,5 +769,43 @@ mod tests {
         let (focus, _short_break, _long_break, cycles) = pomodoro_fields(cmd);
         assert_eq!(focus, std::time::Duration::from_secs(3));
         assert_eq!(cycles, 2);
+    }
+
+    // ── Positional / option conflict ────────────────────────────────────────
+
+    /// Helper: unwrap the Err side of a parse result (avoids needing Debug on Command).
+    fn expect_err(cli_args: &[&str]) -> String {
+        match parse_args(args(cli_args)) {
+            Ok(_) => panic!("expected Err, got Ok"),
+            Err(e) => e,
+        }
+    }
+
+    #[test]
+    fn pomodoro_options_with_extra_positional_rejected() {
+        let err = expect_err(&["--pomodoro", "--focus", "3s", "--break", "2s", "extra"]);
+        assert!(
+            err.contains("unexpected"),
+            "expected 'unexpected' in error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn pomodoro_only_focus_option_with_extra_positional_rejected() {
+        let err = expect_err(&["--pomodoro", "--focus", "3s", "extra"]);
+        assert!(
+            err.contains("unexpected"),
+            "expected 'unexpected' in error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn pomodoro_old_syntax_still_yields_missing_break() {
+        // When no options are used, a lone positional arg still gives the
+        // original "missing BREAK" message.
+        let err = expect_err(&["--pomodoro", "25m"]);
+        assert_eq!(err, "missing BREAK after --pomodoro FOCUS");
     }
 }
