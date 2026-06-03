@@ -4,11 +4,17 @@
 // Copyright (C) 2026 Rezky Nightky
 
 use crate::mode::{Mode, PomodoroPhase};
+use crate::render::ViewMode;
+use crate::theme::Theme;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub enum Command {
     Help,
-    Run(Mode),
+    Run {
+        mode: Mode,
+        theme: Theme,
+        view: ViewMode,
+    },
     SoundTest,
 }
 
@@ -22,12 +28,12 @@ pub fn usage() -> String {
          \x20 zenritme --pomodoro [FOCUS BREAK]\n\
          \x20 zenritme --sound-test\n\
          \x20 zenritme --help\n\n\
+         Options:\n\
+         \x20 --theme <THEME>   void | ember | aura | forest | mono  (default: void)\n\
+         \x20 --view <VIEW>     minimal | orbit | cinematic            (default: orbit)\n\n\
          Duration format:\n\
          \x20 <number>s | <number>m | <number>h\n\
-         Examples:\n\
-         \x20 30s\n\
-         \x20 10m\n\
-         \x20 1h\n\n\
+         \x20 Examples: 30s  10m  1h\n\n\
          Pomodoro examples:\n\
          \x20 zenritme --pomodoro\n\
          \x20 zenritme --pomodoro 3s 2s\n\n\
@@ -39,7 +45,49 @@ pub fn usage() -> String {
     )
 }
 
-pub fn parse_args<I>(mut args: I) -> Result<Command, String>
+/// Parse all arguments. `--theme` and `--view` may appear before or after the mode flag.
+pub fn parse_args<I>(args: I) -> Result<Command, String>
+where
+    I: Iterator<Item = String>,
+{
+    // Collect all args so we can do a pre-pass for --theme / --view.
+    let all: Vec<String> = args.collect();
+
+    let mut theme = Theme::Void;
+    let mut view = ViewMode::Orbit;
+    let mut mode_args: Vec<String> = Vec::new();
+    let mut i = 0;
+
+    while i < all.len() {
+        match all[i].as_str() {
+            "--theme" => {
+                let val = all
+                    .get(i + 1)
+                    .ok_or("missing value after --theme".to_string())?;
+                theme = Theme::from_name(val)
+                    .ok_or_else(|| format!("unknown theme: {}  (see --help)", val))?;
+                i += 2;
+            }
+            "--view" => {
+                let val = all
+                    .get(i + 1)
+                    .ok_or("missing value after --view".to_string())?;
+                view = ViewMode::from_name(val)
+                    .ok_or_else(|| format!("unknown view: {}  (see --help)", val))?;
+                i += 2;
+            }
+            _ => {
+                mode_args.push(all[i].clone());
+                i += 1;
+            }
+        }
+    }
+
+    parse_mode(mode_args.into_iter(), theme, view)
+}
+
+/// Parse the mode-specific arguments (after --theme/--view extraction).
+fn parse_mode<I>(mut args: I, theme: Theme, view: ViewMode) -> Result<Command, String>
 where
     I: Iterator<Item = String>,
 {
@@ -60,12 +108,20 @@ where
 
         "--timer-up" | "--timer-upward-minute" => {
             reject_extra(&mut args, "--timer-up")?;
-            Ok(Command::Run(Mode::TimerUp))
+            Ok(Command::Run {
+                mode: Mode::TimerUp,
+                theme,
+                view,
+            })
         }
 
         "--stopwatch" => {
             reject_extra(&mut args, "--stopwatch")?;
-            Ok(Command::Run(Mode::Stopwatch))
+            Ok(Command::Run {
+                mode: Mode::Stopwatch,
+                theme,
+                view,
+            })
         }
 
         "--pomodoro" => {
@@ -88,12 +144,16 @@ where
                 }
             };
 
-            Ok(Command::Run(Mode::Pomodoro {
-                phase: PomodoroPhase::Focus,
-                focus,
-                short_break,
-                emoji: pick_pomodoro_emoji(),
-            }))
+            Ok(Command::Run {
+                mode: Mode::Pomodoro {
+                    phase: PomodoroPhase::Focus,
+                    focus,
+                    short_break,
+                    emoji: pick_pomodoro_emoji(),
+                },
+                theme,
+                view,
+            })
         }
 
         "--timer-down" | "--timer-back" => {
@@ -105,7 +165,11 @@ where
                 return Err("duration must be > 0".to_string());
             }
             reject_extra(&mut args, "--timer-down")?;
-            Ok(Command::Run(Mode::TimerDown { total: dur }))
+            Ok(Command::Run {
+                mode: Mode::TimerDown { total: dur },
+                theme,
+                view,
+            })
         }
 
         other => Err(format!("unknown argument: {}", other)),
@@ -284,5 +348,116 @@ mod tests {
     #[test]
     fn timer_upward_minute_alias_ok() {
         assert!(parse_args(args(&["--timer-upward-minute"])).is_ok());
+    }
+
+    // ── Theme and view defaults ──────────────────────────────────────────────
+
+    #[test]
+    fn theme_default_is_void() {
+        let cmd = parse_args(args(&["--timer-up"])).unwrap();
+        if let Command::Run { theme, .. } = cmd {
+            assert_eq!(theme, Theme::Void);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn view_default_is_orbit() {
+        let cmd = parse_args(args(&["--timer-up"])).unwrap();
+        if let Command::Run { view, .. } = cmd {
+            assert_eq!(view, ViewMode::Orbit);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn theme_flag_before_mode() {
+        let cmd = parse_args(args(&["--theme", "ember", "--timer-up"])).unwrap();
+        if let Command::Run { theme, .. } = cmd {
+            assert_eq!(theme, Theme::Ember);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn theme_flag_after_mode() {
+        let cmd = parse_args(args(&["--timer-up", "--theme", "aura"])).unwrap();
+        if let Command::Run { theme, .. } = cmd {
+            assert_eq!(theme, Theme::Aura);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn view_flag_parsed() {
+        let cmd = parse_args(args(&["--view", "cinematic", "--timer-up"])).unwrap();
+        if let Command::Run { view, .. } = cmd {
+            assert_eq!(view, ViewMode::Cinematic);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn theme_and_view_combined() {
+        let cmd = parse_args(args(&[
+            "--theme",
+            "forest",
+            "--view",
+            "minimal",
+            "--timer-down",
+            "5m",
+        ]))
+        .unwrap();
+        if let Command::Run { theme, view, .. } = cmd {
+            assert_eq!(theme, Theme::Forest);
+            assert_eq!(view, ViewMode::Minimal);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn unknown_theme_rejected() {
+        assert!(parse_args(args(&["--theme", "neon", "--timer-up"])).is_err());
+    }
+
+    #[test]
+    fn unknown_view_rejected() {
+        assert!(parse_args(args(&["--view", "holographic", "--timer-up"])).is_err());
+    }
+
+    #[test]
+    fn theme_missing_value_rejected() {
+        assert!(parse_args(args(&["--theme"])).is_err());
+    }
+
+    #[test]
+    fn view_missing_value_rejected() {
+        assert!(parse_args(args(&["--view"])).is_err());
+    }
+
+    #[test]
+    fn theme_view_preserve_timer_down() {
+        let cmd = parse_args(args(&[
+            "--theme",
+            "mono",
+            "--view",
+            "minimal",
+            "--timer-down",
+            "30s",
+        ]))
+        .unwrap();
+        if let Command::Run { mode, theme, view } = cmd {
+            assert!(matches!(mode, Mode::TimerDown { .. }));
+            assert_eq!(theme, Theme::Mono);
+            assert_eq!(view, ViewMode::Minimal);
+        } else {
+            panic!("expected Run");
+        }
     }
 }

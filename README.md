@@ -2,6 +2,15 @@
 
 Minimal terminal timer, stopwatch, and pomodoro.
 
+## Examples
+
+```sh
+zenritme --timer-down 25m --theme ember
+zenritme --pomodoro --view cinematic --theme aura
+zenritme --stopwatch --view minimal --theme mono
+zenritme --timer-up --theme void --view orbit
+```
+
 ## Usage
 
 ```

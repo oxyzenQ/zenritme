@@ -1,0 +1,199 @@
+// SPDX-License-Identifier: GPL-3.0-only
+//
+// Zenritme
+// Copyright (C) 2026 Rezky Nightky
+
+/// Supported visual themes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Theme {
+    Void,
+    Ember,
+    Aura,
+    Forest,
+    Mono,
+}
+
+impl Theme {
+    /// Parse a theme name (case-insensitive).
+    pub fn from_name(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "void" => Some(Self::Void),
+            "ember" => Some(Self::Ember),
+            "aura" => Some(Self::Aura),
+            "forest" => Some(Self::Forest),
+            "mono" => Some(Self::Mono),
+            _ => None,
+        }
+    }
+
+    /// Resolve to the theme's raw palette (ignores NO_COLOR).
+    pub fn palette(&self) -> ColorFields {
+        match self {
+            Self::Void => ColorFields::void(),
+            Self::Ember => ColorFields::ember(),
+            Self::Aura => ColorFields::aura(),
+            Self::Forest => ColorFields::forest(),
+            Self::Mono => ColorFields::plain(),
+        }
+    }
+
+    /// Resolve to a concrete color palette, respecting NO_COLOR.
+    pub fn colors(&self) -> ColorFields {
+        let no_color = std::env::var("NO_COLOR").is_ok();
+        if no_color {
+            return ColorFields::plain();
+        }
+        self.palette()
+    }
+}
+
+/// ANSI color codes for each UI element.
+#[derive(Clone, Copy)]
+#[allow(dead_code)]
+pub struct ColorFields {
+    pub title: &'static str,
+    pub time: &'static str,
+    pub progress_fill: &'static str,
+    pub progress_empty: &'static str,
+    pub label: &'static str,
+    pub dim: &'static str,
+    pub border: &'static str,
+    pub accent: &'static str,
+    pub spinner: &'static str,
+    pub reset: &'static str,
+}
+
+pub const RESET: &str = "\x1b[0m";
+
+impl ColorFields {
+    fn plain() -> Self {
+        Self {
+            title: "",
+            time: "",
+            progress_fill: "",
+            progress_empty: "",
+            label: "",
+            dim: "",
+            border: "",
+            accent: "",
+            spinner: "",
+            reset: "",
+        }
+    }
+
+    fn void() -> Self {
+        Self {
+            title: "\x1b[1;38;5;7m",
+            time: "\x1b[1;38;5;15m",
+            progress_fill: "\x1b[38;5;7m",
+            progress_empty: "\x1b[38;5;240m",
+            label: "\x1b[38;5;240m",
+            dim: "\x1b[38;5;240m",
+            border: "\x1b[38;5;240m",
+            accent: "\x1b[38;5;15m",
+            spinner: "\x1b[38;5;6m",
+            reset: RESET,
+        }
+    }
+
+    fn ember() -> Self {
+        Self {
+            title: "\x1b[1;38;5;208m",
+            time: "\x1b[1;38;5;220m",
+            progress_fill: "\x1b[38;5;208m",
+            progress_empty: "\x1b[38;5;238m",
+            label: "\x1b[38;5;238m",
+            dim: "\x1b[38;5;238m",
+            border: "\x1b[38;5;238m",
+            accent: "\x1b[38;5;202m",
+            spinner: "\x1b[38;5;214m",
+            reset: RESET,
+        }
+    }
+
+    fn aura() -> Self {
+        Self {
+            title: "\x1b[1;38;5;111m",
+            time: "\x1b[1;38;5;159m",
+            progress_fill: "\x1b[38;5;111m",
+            progress_empty: "\x1b[38;5;238m",
+            label: "\x1b[38;5;238m",
+            dim: "\x1b[38;5;238m",
+            border: "\x1b[38;5;238m",
+            accent: "\x1b[38;5;147m",
+            spinner: "\x1b[38;5;159m",
+            reset: RESET,
+        }
+    }
+
+    fn forest() -> Self {
+        Self {
+            title: "\x1b[1;38;5;71m",
+            time: "\x1b[1;38;5;114m",
+            progress_fill: "\x1b[38;5;71m",
+            progress_empty: "\x1b[38;5;238m",
+            label: "\x1b[38;5;238m",
+            dim: "\x1b[38;5;238m",
+            border: "\x1b[38;5;238m",
+            accent: "\x1b[38;5;107m",
+            spinner: "\x1b[38;5;114m",
+            reset: RESET,
+        }
+    }
+}
+
+// ─── Tests ───────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_known_themes() {
+        assert_eq!(Theme::from_name("void"), Some(Theme::Void));
+        assert_eq!(Theme::from_name("EMBER"), Some(Theme::Ember));
+        assert_eq!(Theme::from_name("Aura"), Some(Theme::Aura));
+        assert_eq!(Theme::from_name("forest"), Some(Theme::Forest));
+        assert_eq!(Theme::from_name("mono"), Some(Theme::Mono));
+    }
+
+    #[test]
+    fn parse_unknown_theme() {
+        assert_eq!(Theme::from_name("neon"), None);
+        assert_eq!(Theme::from_name(""), None);
+    }
+
+    #[test]
+    fn void_theme_has_codes() {
+        let c = Theme::Void.palette();
+        assert!(!c.title.is_empty());
+        assert!(!c.time.is_empty());
+        assert!(!c.reset.is_empty());
+    }
+
+    #[test]
+    fn mono_theme_is_plain() {
+        let c = Theme::Mono.colors();
+        assert!(c.title.is_empty());
+        assert!(c.reset.is_empty());
+    }
+
+    #[test]
+    fn plain_has_empty_reset() {
+        let c = ColorFields::plain();
+        assert!(c.reset.is_empty());
+    }
+
+    #[test]
+    fn all_themes_produce_non_empty_border_when_colored() {
+        for theme in [Theme::Void, Theme::Ember, Theme::Aura, Theme::Forest] {
+            let c = theme.palette();
+            assert!(
+                !c.border.is_empty(),
+                "{:?} border should not be empty",
+                theme
+            );
+            assert!(!c.reset.is_empty(), "{:?} reset should not be empty", theme);
+        }
+    }
+}

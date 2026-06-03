@@ -3,14 +3,16 @@
 // Zenritme
 // Copyright (C) 2026 Rezky Nightky
 
+mod animation;
 mod cli;
 mod engine;
 mod mode;
 mod render;
 mod sound;
 mod terminal;
+mod theme;
 
-use mode::{Mode, PomodoroPhase};
+use mode::PomodoroPhase;
 use std::sync::mpsc;
 
 fn main() {
@@ -30,15 +32,17 @@ fn main() {
         cli::Command::SoundTest => {
             sound::sound_test();
         }
-        cli::Command::Run(mode) => {
-            run(mode);
+        cli::Command::Run { mode, theme, view } => {
+            run(mode, theme, view);
         }
     }
 }
 
-fn run(mode: Mode) {
+fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode) {
     let (_term, rx) = terminal::spawn_input();
     let mut engine = engine::Engine::new(mode);
+    let colors = theme.colors();
+    let mut frame: u64 = 0;
 
     loop {
         // ── Process keypresses ────────────────────────────────────────────────
@@ -71,12 +75,31 @@ fn run(mode: Mode) {
         // ── Advance engine ────────────────────────────────────────────────────
         engine.tick();
 
-        let elapsed = engine.elapsed();
-        let remaining = engine.remaining();
-        let state = engine.state();
-        let progress = compute_progress(&engine);
+        let state = render::RenderState {
+            mode: engine.mode(),
+            elapsed: engine.elapsed(),
+            remaining: engine.remaining(),
+            total: match engine.mode() {
+                mode::Mode::TimerDown { total } => Some(total),
+                mode::Mode::Pomodoro {
+                    phase,
+                    focus,
+                    short_break,
+                    ..
+                } => Some(match phase {
+                    PomodoroPhase::Focus => focus,
+                    PomodoroPhase::Break => short_break,
+                }),
+                _ => None,
+            },
+            progress: render::compute_progress(&engine),
+            state: engine.state(),
+            frame,
+            colors: &colors,
+            view,
+        };
 
-        render::draw(engine.mode(), elapsed, remaining, state, progress);
+        render::draw(&state);
 
         // ── Handle events ─────────────────────────────────────────────────────
         if let Some(ev) = engine.take_event() {
@@ -91,38 +114,7 @@ fn run(mode: Mode) {
             }
         }
 
-        std::thread::sleep(std::time::Duration::from_millis(100));
-    }
-}
-
-/// Returns `Some(0.0..=1.0)` for bounded modes, `None` for unbounded.
-fn compute_progress(engine: &engine::Engine) -> Option<f32> {
-    match engine.mode() {
-        Mode::TimerDown { total } => {
-            if total.is_zero() {
-                None
-            } else {
-                Some((engine.elapsed().as_secs_f32() / total.as_secs_f32()).clamp(0.0, 1.0))
-            }
-        }
-        Mode::Pomodoro {
-            phase,
-            focus,
-            short_break,
-            ..
-        } => {
-            let phase_total = match phase {
-                PomodoroPhase::Focus => focus,
-                PomodoroPhase::Break => short_break,
-            };
-            let remaining = engine.remaining()?;
-            if phase_total.is_zero() {
-                None
-            } else {
-                let used = phase_total.saturating_sub(remaining);
-                Some((used.as_secs_f32() / phase_total.as_secs_f32()).clamp(0.0, 1.0))
-            }
-        }
-        _ => None,
+        frame += 1;
+        std::thread::sleep(std::time::Duration::from_millis(80));
     }
 }
