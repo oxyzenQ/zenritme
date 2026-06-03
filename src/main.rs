@@ -57,9 +57,7 @@ fn run(mode: Mode) {
                     // ESC or ESC-sequence
                     27 => match rx.try_recv() {
                         // Arrow keys / function keys — consume the rest of the sequence
-                        Ok(next) if next == b'[' || next == b'O' => {
-                            while rx.try_recv().is_ok() {}
-                        }
+                        Ok(next) if next == b'[' || next == b'O' => while rx.try_recv().is_ok() {},
                         // Bare ESC or broken sequence → quit
                         Ok(_) | Err(mpsc::TryRecvError::Empty) => return,
                         Err(mpsc::TryRecvError::Disconnected) => return,
