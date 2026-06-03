@@ -62,6 +62,35 @@ Session flow: FOCUS 1/N → SHORT BREAK 1/N → … → FOCUS N/N → LONG BREAK
 | `p` | Pause / resume |
 | `r` | Reset current session |
 
+## Install
+
+### From release tarball
+
+```sh
+tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
+cd zenritme-vVERSION-x86_64-unknown-linux-gnu
+sudo ./install.sh
+```
+
+### From source
+
+```sh
+cargo build --release --locked
+sudo ./scripts/install.sh
+```
+
+Custom prefix:
+
+```sh
+PREFIX=/usr ./scripts/install.sh
+```
+
+### Uninstall
+
+```sh
+sudo ./scripts/uninstall.sh
+```
+
 ## Project docs
 
 - [RULES.md](RULES.md) — project rules, LOC guard, splitting guidance

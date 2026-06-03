@@ -96,8 +96,10 @@ jobs:
           set -euo pipefail
           ARCHIVE_NAME="zenritme-v${VERSION}-x86_64-unknown-linux-gnu"
           STAGING="${ARCHIVE_NAME}"
-          mkdir -p "${STAGING}/docs"
+          mkdir -p "${STAGING}/scripts" "${STAGING}/docs"
           cp target/release/zenritme     "${STAGING}/"
+          cp scripts/install.sh           "${STAGING}/scripts/"
+          cp scripts/uninstall.sh         "${STAGING}/scripts/"
           cp README.md                    "${STAGING}/"
           cp LICENSE                      "${STAGING}/"
           cp NOTICE.md                    "${STAGING}/"
@@ -135,7 +137,14 @@ jobs:
 
           ```sh
           tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
-          sudo install zenritme-vVERSION-x86_64-unknown-linux-gnu/zenritme /usr/local/bin/
+          cd zenritme-vVERSION-x86_64-unknown-linux-gnu
+          sudo ./install.sh
+          ```
+
+          ## Uninstall
+
+          ```sh
+          sudo ./uninstall.sh
           ```
 
           ## Assets

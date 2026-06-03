@@ -65,3 +65,19 @@ Run it manually at any time:
 
 The script exits with **0** when all files pass and **1** (with a report)
 when any file exceeds the limit.
+
+## Install script safety
+
+Shell scripts under `scripts/` that handle installation must follow these rules:
+
+- **No network access** — scripts must never use `curl`, `wget`, or any
+  network tool. Users download the tarball themselves and run the install
+  script from the extracted archive.
+- **No `curl | sh` pattern** — the project will never publish or recommend
+  a one-liner that pipes remote content into a shell.
+- **`set -euo pipefail`** — all shell scripts must use strict error handling.
+- **PREFIX / DESTDIR** — install and uninstall scripts must respect
+  `PREFIX` (default `/usr/local`) and `DESTDIR` for staging.
+- **Syntax validation** — scripts must pass `bash -n` (syntax-only check).
+- **No sudo inside scripts** — scripts must not call `sudo` internally.
+  Users elevate privileges when invoking the script if needed.

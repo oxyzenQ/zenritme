@@ -68,3 +68,17 @@ procedure.
 
 If you discover a security issue, please open a GitHub issue with the
 `security` label or contact the maintainer directly.
+
+## Install script security
+
+The install and uninstall scripts (`scripts/install.sh`,
+`scripts/uninstall.sh`) are designed with a minimal-trust approach:
+
+- **No network access** — they copy a binary from the local filesystem only.
+- **No `curl | sh` pattern** — the project does not support or recommend
+  remote-script installation.
+- **No `sudo` calls** — privilege escalation is the caller's responsibility.
+- **Strict shell mode** — all scripts use `set -euo pipefail`.
+- **Syntax-validated** — all scripts pass `bash -n`.
+
+See [RULES.md](../RULES.md) for the full install script safety policy.
