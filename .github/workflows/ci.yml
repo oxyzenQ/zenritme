@@ -38,3 +38,7 @@ jobs:
       - name: Run check-all
         run: ./build.sh check-all --no-cache
         shell: bash
+
+      - name: LOC guard
+        run: bash scripts/check-loc.sh
+        shell: bash

@@ -22,6 +22,17 @@ Duration format: `30s`, `10m`, `1h`
 | `p` | Pause / resume |
 | `r` | Reset current session |
 
+## Project docs
+
+- [RULES.md](RULES.md) — project rules, LOC guard, splitting guidance
+- [docs/ENDURANCE.md](docs/ENDURANCE.md) — long-running stability testing
+- [docs/SECURITY.md](docs/SECURITY.md) — security policy and supply-chain minimization
+
+## Principles
+
+- **Zero external dependencies** — the project uses only the Rust standard library.
+- **LOC guard** — all core code files must stay under 1000 lines. Enforced by `scripts/check-loc.sh`.
+
 ## License
 
 Zenritme is licensed under the **GNU General Public License v3.0 only** (`GPL-3.0-only`).
