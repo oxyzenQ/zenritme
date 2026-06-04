@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/zenritme-2026.png" alt="zenritme logo" width="240">
+  <img src="assets/zenritme-new-logo.png" alt="zenritme logo" width="240">
 </p>
 
 <h1 align="center">zenritme</h1>
