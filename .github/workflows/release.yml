@@ -131,7 +131,7 @@ jobs:
           - NO_COLOR support (per no-color.org)
           - Zero external Rust dependencies
           - LOC guard enforced (all files under 1000 lines)
-          - 58 tests, zero warnings
+          - 138 tests, zero warnings
 
           ## Install
 
