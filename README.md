@@ -24,12 +24,30 @@ zenritme -V, --version
 
 Duration format: `30s`, `10m`, `1h`
 
+### Themes
+
+| Theme | Style |
+|-------|-------|
+| `void` | Minimal dark |
+| `ember` | Warm red/orange |
+| `aura` | Purple/magenta |
+| `forest` | Green tones |
+| `mono` | Monochrome/gray |
+
+### Views
+
+| View | Description |
+|------|-------------|
+| `minimal` | Compact single-line display |
+| `orbit` | Circular progress indicator |
+| `cinematic` | Full-width centered box layout |
+
 ### Version output
 
 ```sh
 $ zenritme -V
-Version: v1.3.0
-Build: linux-x86_64 (1e6791d)
+Version: v2.0.0-rc.1
+Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 Rezky_nightky
 License: GPL-3.0-only
 Source: https://github.com/oxyzenQ/zenritme
