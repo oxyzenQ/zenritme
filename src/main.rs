@@ -11,6 +11,7 @@ mod render;
 mod sound;
 mod terminal;
 mod theme;
+mod update;
 mod version;
 
 use mode::PomodoroPhase;
@@ -33,6 +34,13 @@ fn main() {
         cli::Command::Version => {
             println!("{}", version::version_report());
         }
+        cli::Command::CheckUpdate => match update::check_update(env!("CARGO_PKG_VERSION")) {
+            Ok(()) => {}
+            Err(e) => {
+                eprintln!("update check failed: {e}");
+                std::process::exit(1);
+            }
+        },
         cli::Command::SoundTest => {
             sound::sound_test();
         }

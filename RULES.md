@@ -81,3 +81,21 @@ Shell scripts under `scripts/` that handle installation must follow these rules:
 - **Syntax validation** — scripts must pass `bash -n` (syntax-only check).
 - **No sudo inside scripts** — scripts must not call `sudo` internally.
   Users elevate privileges when invoking the script if needed.
+
+## Network access policy
+
+Network access in Zenritme is **opt-in and read-only by default**:
+
+- **Normal timer modes** (timer-up, timer-down, stopwatch, pomodoro) must
+  never access the network.
+- **`--check-update`** is the only command that accesses the network. It must
+  remain strictly read-only: it queries an API and prints a status report but
+  never downloads, installs, or replaces binaries.
+- **No `curl | sh` or remote execution** — downloaded content must never be
+  passed to a shell or executed.
+- **No `--install-update`** — automatic binary replacement is not permitted.
+  Users must download and install updates manually.
+- **Timeout required** — any network request must use a timeout (e.g.,
+  `--max-time`) to prevent indefinite hanging.
+- **No shell interpolation** — URLs and request parameters must be compile-time
+  constants; user input must never be interpolated into commands.

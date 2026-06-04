@@ -13,6 +13,7 @@ use crate::theme::Theme;
 pub enum Command {
     Help,
     Version,
+    CheckUpdate,
     Run {
         mode: Mode,
         theme: Theme,
@@ -39,6 +40,7 @@ pub fn usage() -> String {
          \x20 zenritme --stopwatch\n\
          \x20 zenritme --pomodoro [FOCUS BREAK]\n\
          \x20 zenritme --sound-test\n\
+         \x20 zenritme --check-update\n\
          \x20 zenritme --help\n\
          \x20 zenritme -V, --version\n\n\
          Options:\n\
@@ -131,6 +133,11 @@ where
         "-V" | "--version" => {
             reject_extra(&mut args, "--version")?;
             Ok(Command::Version)
+        }
+
+        "--check-update" => {
+            reject_extra(&mut args, "--check-update")?;
+            Ok(Command::CheckUpdate)
         }
 
         "--sound-test" => {
@@ -283,6 +290,11 @@ mod tests {
     #[test]
     fn extra_args_timer_down() {
         assert!(parse_args(args(&["--timer-down", "10m", "extra"])).is_err());
+    }
+
+    #[test]
+    fn extra_args_check_update() {
+        assert!(parse_args(args(&["--check-update", "extra"])).is_err());
     }
 
     #[test]
@@ -454,5 +466,15 @@ mod tests {
     #[test]
     fn unknown_argument_rejected() {
         assert!(parse_args(args(&["--nonexistent"])).is_err());
+    }
+
+    // ── check-update ────────────────────────────────────────────────────────
+
+    #[test]
+    fn check_update_parsed() {
+        assert!(matches!(
+            parse_args(args(&["--check-update"])),
+            Ok(Command::CheckUpdate)
+        ));
     }
 }

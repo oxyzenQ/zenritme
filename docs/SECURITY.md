@@ -56,7 +56,9 @@ As a timer application, Zenritme may run for hours. Stability concerns include:
   bounded size.
 - **No unbounded threads** — only a single reader thread is spawned for
   input.
-- **No network access** — Zenritme never connects to the network.
+- **No network access for timers** — normal timer modes (timer-up, timer-down,
+  stopwatch, pomodoro) never connect to the network. Network access is used
+  only by the opt-in `--check-update` command.
 - **No file I/O during runtime** — Zenritme does not read or write files
   while running (configuration is passed via CLI arguments and environment
   variables).
@@ -82,3 +84,28 @@ The install and uninstall scripts (`scripts/install.sh`,
 - **Syntax-validated** — all scripts pass `bash -n`.
 
 See [RULES.md](../RULES.md) for the full install script safety policy.
+
+## Update checker security
+
+The `--check-update` command (`src/update.rs`) is designed as a read-only,
+minimal-trust network operation:
+
+- **Read-only** — it only queries the GitHub releases API and prints a status
+  report. It never downloads, installs, or replaces any binaries.
+- **No `curl | sh` pattern** — the response body is parsed in-process to
+  extract the version tag; downloaded content is never executed.
+- **No auto-install** — there is no `--install-update` flag. Users manually
+  download and install updates.
+- **No authentication required** — the public GitHub API is used without
+  tokens.
+- **Timeout-bounded** — the `curl` request uses `--max-time 15` to prevent
+  indefinite hanging.
+- **No shell interpolation** — the API URL is a compile-time constant;
+  no user input is interpolated into shell commands.
+- **Minimal JSON parsing** — only the `tag_name` field is extracted using a
+  hand-rolled parser (no `serde_json` dependency).
+
+If a self-update feature (`--install-update`) were ever added, it would
+require checksum verification, optional signature validation, and an explicit
+user confirmation step before replacing the binary. No such feature is
+currently planned.

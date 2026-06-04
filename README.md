@@ -18,6 +18,8 @@ zenritme --timer-up
 zenritme --timer-down <DURATION>
 zenritme --stopwatch
 zenritme --pomodoro [FOCUS BREAK]
+zenritme --sound-test
+zenritme --check-update
 zenritme --help
 zenritme -V, --version
 ```
@@ -52,6 +54,23 @@ Copyright: (c) 2026 Rezky_nightky
 License: GPL-3.0-only
 Source: https://github.com/oxyzenQ/zenritme
 ```
+
+### Check for updates
+
+`zenritme --check-update` queries the GitHub releases API and reports whether
+a newer version is available. This command is **read-only** — it does not
+download, install, or replace any binaries.
+
+```sh
+$ zenritme --check-update
+Zenritme update check
+Current: v2.0.0-rc.1
+Latest:  v2.0.0
+Status:  update available
+Source:  https://github.com/oxyzenQ/zenritme/releases/latest
+```
+
+Requires `curl` on the system PATH. Does not require a GitHub token.
 
 ### Pomodoro Masterclass
 
