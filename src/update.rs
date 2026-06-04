@@ -194,6 +194,23 @@ pub fn extract_tag_name(json: &str) -> Option<String> {
     Some(value)
 }
 
+// ─── Version normalization ────────────────────────────────────────────────────
+
+/// Ensure a version string has exactly one leading `v`.
+///
+/// - `"1.3.0"`        → `"v1.3.0"`
+/// - `"v1.3.0"`       → `"v1.3.0"`
+/// - `"v2.0.0-rc.1"`  → `"v2.0.0-rc.1"`
+/// - `""`             → `"v"`
+pub fn normalize_version(s: &str) -> String {
+    let trimmed = s.trim();
+    if trimmed.starts_with('v') {
+        trimmed.to_string()
+    } else {
+        format!("v{trimmed}")
+    }
+}
+
 // ─── Network fetch ───────────────────────────────────────────────────────────
 
 /// curl exit codes that we map to human-readable messages.
@@ -288,8 +305,11 @@ pub fn check_update(current_version: &str) -> Result<(), String> {
     };
 
     println!("Zenritme update check");
-    println!("Current: v{current_version}");
-    println!("Latest:  v{latest_tag}");
+    let current_display = normalize_version(current_version);
+    let latest_display = normalize_version(&latest_tag);
+
+    println!("Current: {current_display}");
+    println!("Latest:  {latest_display}");
     println!("Status:  {status_text}");
     println!("Source:  {RELEASES_URL}");
 
@@ -464,6 +484,38 @@ mod tests {
     #[test]
     fn extract_tag_name_empty_json() {
         assert_eq!(extract_tag_name("{}"), None);
+    }
+
+    // ── normalize_version ───────────────────────────────────────────────────
+
+    #[test]
+    fn normalize_without_v() {
+        assert_eq!(normalize_version("1.3.0"), "v1.3.0");
+    }
+
+    #[test]
+    fn normalize_with_v() {
+        assert_eq!(normalize_version("v1.3.0"), "v1.3.0");
+    }
+
+    #[test]
+    fn normalize_prerelease() {
+        assert_eq!(normalize_version("v2.0.0-rc.1"), "v2.0.0-rc.1");
+    }
+
+    #[test]
+    fn normalize_without_v_prerelease() {
+        assert_eq!(normalize_version("2.0.0-rc.1"), "v2.0.0-rc.1");
+    }
+
+    #[test]
+    fn normalize_empty_does_not_panic() {
+        assert_eq!(normalize_version(""), "v");
+    }
+
+    #[test]
+    fn normalize_whitespace_trimmed() {
+        assert_eq!(normalize_version("  v1.3.0  "), "v1.3.0");
     }
 
     // ── interpret_curl_exit ─────────────────────────────────────────────────
