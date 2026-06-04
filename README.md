@@ -37,6 +37,7 @@ zenritme --stopwatch
 zenritme --pomodoro [FOCUS BREAK]
 zenritme --sound-test
 zenritme --check-update
+zenritme --check-updated
 zenritme --help
 zenritme -V, --version
 ```
@@ -69,22 +70,23 @@ Version: v2.0.0
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 Rezky_nightky
 License: GPL-3.0-only
-Source: https://github.com/oxyzenQ/zenritme
+Source: https://github.com/oxyzenq/zenritme
 ```
 
 ### Check for updates
 
 `zenritme --check-update` queries the GitHub releases API and reports whether
-a newer version is available. This command is **read-only** — it does not
-download, install, or replace any binaries.
+a newer version is available. `--check-updated` is accepted as an alias. This
+command is **read-only** — it does not download, install, or replace any
+binaries.
 
 ```sh
 $ zenritme --check-update
-Zenritme update check
+zenritme update check
 Current: v2.0.0
 Latest:  v2.0.0
 Status:  up to date
-Source:  https://github.com/oxyzenQ/zenritme/releases/latest
+Source:  https://github.com/oxyzenq/zenritme/releases/latest
 ```
 
 Requires `curl` on the system PATH. Does not require a GitHub token.

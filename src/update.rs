@@ -19,8 +19,8 @@
 
 use std::process::Command;
 
-const GITHUB_API_URL: &str = "https://api.github.com/repos/oxyzenQ/zenritme/releases/latest";
-const RELEASES_URL: &str = "https://github.com/oxyzenQ/zenritme/releases/latest";
+const GITHUB_API_URL: &str = "https://api.github.com/repos/oxyzenq/zenritme/releases/latest";
+const RELEASES_URL: &str = "https://github.com/oxyzenq/zenritme/releases/latest";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -228,7 +228,7 @@ fn interpret_curl_exit(code: i32) -> &'static str {
 /// Classify an HTTP status code from the GitHub API response.
 fn interpret_http_status(code: u16) -> &'static str {
     match code {
-        404 => "no latest GitHub release found for oxyzenQ/zenritme",
+        404 => "no latest GitHub release found for oxyzenq/zenritme",
         403 => "GitHub API request was rate-limited or forbidden",
         _ => "GitHub API returned an unexpected error",
     }
@@ -304,7 +304,7 @@ pub fn check_update(current_version: &str) -> Result<(), String> {
         UpdateStatus::CurrentIsPrereleaseNewer => "current is a prerelease/newer line",
     };
 
-    println!("Zenritme update check");
+    println!("zenritme update check");
     let current_display = normalize_version(current_version);
     let latest_display = normalize_version(&latest_tag);
 
@@ -551,7 +551,7 @@ mod tests {
     fn http_404() {
         assert_eq!(
             interpret_http_status(404),
-            "no latest GitHub release found for oxyzenQ/zenritme"
+            "no latest GitHub release found for oxyzenq/zenritme"
         );
     }
 

@@ -14,7 +14,7 @@ pub fn version_report() -> String {
          Build: {target} ({commit})\n\
          Copyright: (c) 2026 Rezky_nightky\n\
          License: GPL-3.0-only\n\
-         Source: https://github.com/oxyzenQ/zenritme"
+         Source: https://github.com/oxyzenq/zenritme"
     )
 }
 
@@ -64,7 +64,7 @@ mod tests {
     fn version_report_contains_source() {
         let report = version_report();
         assert!(
-            report.contains("Source: https://github.com/oxyzenQ/zenritme"),
+            report.contains("Source: https://github.com/oxyzenq/zenritme"),
             "missing Source line in:\n{report}"
         );
     }

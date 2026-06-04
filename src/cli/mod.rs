@@ -41,6 +41,7 @@ pub fn usage() -> String {
          \x20 zenritme --pomodoro [FOCUS BREAK]\n\
          \x20 zenritme --sound-test\n\
          \x20 zenritme --check-update\n\
+         \x20 zenritme --check-updated\n\
          \x20 zenritme --help\n\
          \x20 zenritme -V, --version\n\n\
          Options:\n\
@@ -135,7 +136,7 @@ where
             Ok(Command::Version)
         }
 
-        "--check-update" => {
+        "--check-update" | "--check-updated" => {
             reject_extra(&mut args, "--check-update")?;
             Ok(Command::CheckUpdate)
         }
@@ -474,6 +475,14 @@ mod tests {
     fn check_update_parsed() {
         assert!(matches!(
             parse_args(args(&["--check-update"])),
+            Ok(Command::CheckUpdate)
+        ));
+    }
+
+    #[test]
+    fn check_updated_alias_parsed() {
+        assert!(matches!(
+            parse_args(args(&["--check-updated"])),
             Ok(Command::CheckUpdate)
         ));
     }
