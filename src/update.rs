@@ -196,35 +196,87 @@ pub fn extract_tag_name(json: &str) -> Option<String> {
 
 // ─── Network fetch ───────────────────────────────────────────────────────────
 
+/// curl exit codes that we map to human-readable messages.
+/// See <https://curl.se/docs/manpage.html#EXIT-CODES>
+fn interpret_curl_exit(code: i32) -> &'static str {
+    match code {
+        6 => "DNS resolution failed",
+        7 => "connection refused",
+        28 => "network request timed out",
+        35 => "SSL/TLS handshake failed",
+        _ => "network request failed",
+    }
+}
+
+/// Classify an HTTP status code from the GitHub API response.
+fn interpret_http_status(code: u16) -> &'static str {
+    match code {
+        404 => "no latest GitHub release found for oxyzenQ/zenritme",
+        403 => "GitHub API request was rate-limited or forbidden",
+        _ => "GitHub API returned an unexpected error",
+    }
+}
+
 /// Run the full update check: fetch latest release from GitHub, compare versions,
 /// and print the result. Returns `Ok(())` on success or `Err(reason)` on failure.
 pub fn check_update(current_version: &str) -> Result<(), String> {
-    // Fetch from GitHub API via curl.
+    // Use --write-out to capture the HTTP status code on a separate final line.
+    // We intentionally do NOT use --fail so we can distinguish HTTP error codes.
     let output = Command::new("curl")
         .args([
             "--silent",
-            "--fail",
             "--max-time",
             "15",
             "--header",
             "Accept: application/vnd.github+json",
             "--header",
             "User-Agent: zenritme",
+            "--write-out",
+            "\n%{http_code}",
             GITHUB_API_URL,
         ])
         .output()
-        .map_err(|e| format!("failed to run curl: {e}"))?;
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                "curl is not available on PATH".to_string()
+            } else {
+                format!("failed to run curl: {e}")
+            }
+        })?;
 
+    // Check curl's own exit code (network-level failure, not HTTP).
     if !output.status.success() {
         let code = output.status.code().unwrap_or(-1);
-        return Err(format!("GitHub API request failed (curl exit code {code})"));
+        return Err(interpret_curl_exit(code).to_string());
     }
 
-    let body = String::from_utf8(output.stdout)
-        .map_err(|e| format!("response was not valid UTF-8: {e}"))?;
+    // Split response: body is everything before the final newline,
+    // HTTP status code is the last line.
+    let raw = String::from_utf8_lossy(&output.stdout);
+    let mut lines: Vec<&str> = raw.rsplitn(2, '\n').collect();
+    lines.reverse(); // [body, status_code]
 
-    let latest_tag = extract_tag_name(&body)
-        .ok_or_else(|| "failed to parse tag_name from GitHub response".to_string())?;
+    let http_code: u16 = lines
+        .get(1)
+        .and_then(|s| s.trim().parse::<u16>().ok())
+        .unwrap_or(0);
+
+    // Non-200 HTTP responses are mapped to human-readable messages.
+    if http_code != 200 {
+        return Err(interpret_http_status(http_code).to_string());
+    }
+
+    let body_owned =
+        String::from_utf8(output.stdout).map_err(|_| "response was not valid UTF-8".to_string())?;
+    // Re-extract body (before the trailing status line).
+    let body_trimmed = if let Some(pos) = body_owned.rfind('\n') {
+        &body_owned[..pos]
+    } else {
+        &body_owned
+    };
+
+    let latest_tag = extract_tag_name(body_trimmed)
+        .ok_or_else(|| "could not parse latest release tag from GitHub response".to_string())?;
 
     let info = compare_versions(current_version, &latest_tag);
 
@@ -412,5 +464,58 @@ mod tests {
     #[test]
     fn extract_tag_name_empty_json() {
         assert_eq!(extract_tag_name("{}"), None);
+    }
+
+    // ── interpret_curl_exit ─────────────────────────────────────────────────
+
+    #[test]
+    fn curl_exit_dns() {
+        assert_eq!(interpret_curl_exit(6), "DNS resolution failed");
+    }
+
+    #[test]
+    fn curl_exit_connection_refused() {
+        assert_eq!(interpret_curl_exit(7), "connection refused");
+    }
+
+    #[test]
+    fn curl_exit_timeout() {
+        assert_eq!(interpret_curl_exit(28), "network request timed out");
+    }
+
+    #[test]
+    fn curl_exit_ssl() {
+        assert_eq!(interpret_curl_exit(35), "SSL/TLS handshake failed");
+    }
+
+    #[test]
+    fn curl_exit_unknown() {
+        assert_eq!(interpret_curl_exit(99), "network request failed");
+    }
+
+    // ── interpret_http_status ───────────────────────────────────────────────
+
+    #[test]
+    fn http_404() {
+        assert_eq!(
+            interpret_http_status(404),
+            "no latest GitHub release found for oxyzenQ/zenritme"
+        );
+    }
+
+    #[test]
+    fn http_403() {
+        assert_eq!(
+            interpret_http_status(403),
+            "GitHub API request was rate-limited or forbidden"
+        );
+    }
+
+    #[test]
+    fn http_500() {
+        assert_eq!(
+            interpret_http_status(500),
+            "GitHub API returned an unexpected error"
+        );
     }
 }
