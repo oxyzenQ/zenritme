@@ -146,9 +146,10 @@ jobs:
           ### Invariants
 
           - Zero external Rust dependencies
-          - 138 tests, zero warnings
+          - 175 tests, zero warnings
           - LOC guard: all core files under 1000 lines
-          - No runtime behavior changes since v1.3.0 (except version output)
+          - Read-only `--check-update` with human-readable error messages
+          - Install and uninstall scripts with PREFIX/DESTDIR support
 
           BODY
           else
@@ -161,7 +162,8 @@ jobs:
           - NO_COLOR support (per no-color.org)
           - Zero external Rust dependencies
           - LOC guard enforced (all files under 1000 lines)
-          - 138 tests, zero warnings
+          - 175 tests, zero warnings
+          - Read-only `--check-update` with human-readable error messages
 
           BODY
           fi

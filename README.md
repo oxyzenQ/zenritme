@@ -48,7 +48,7 @@ Duration format: `30s`, `10m`, `1h`
 
 ```sh
 $ zenritme -V
-Version: v2.0.0-rc.1
+Version: v2.0.0
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 Rezky_nightky
 License: GPL-3.0-only
@@ -64,9 +64,9 @@ download, install, or replace any binaries.
 ```sh
 $ zenritme --check-update
 Zenritme update check
-Current: v2.0.0-rc.1
+Current: v2.0.0
 Latest:  v2.0.0
-Status:  update available
+Status:  up to date
 Source:  https://github.com/oxyzenQ/zenritme/releases/latest
 ```
 
