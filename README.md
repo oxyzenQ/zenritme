@@ -1,6 +1,34 @@
-# zenritme — a quiet terminal timer
+<p align="center">
+  <img src="assets/zenritme-2026.png" alt="Zenritme logo" width="240">
+</p>
 
-Minimal terminal timer, stopwatch, and pomodoro.
+<h1 align="center">Zenritme</h1>
+
+<p align="center">
+  <strong>A quiet terminal timer for focus, stopwatch, and Pomodoro sessions.</strong>
+</p>
+
+<p align="center">
+  Minimal, fast, and keyboard-friendly timing from your terminal.
+</p>
+
+<p align="center">
+  <a href="https://github.com/oxyzenQ/zenritme/actions/workflows/ci.yml">
+    <img src="https://github.com/oxyzenQ/zenritme/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status">
+  </a>
+  <a href="https://github.com/oxyzenQ/zenritme/releases">
+    <img src="https://img.shields.io/badge/release-GitHub-7C3AED?style=flat-square&labelColor=111827" alt="GitHub releases">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-GPL--3.0-6D28D9?style=flat-square&labelColor=111827" alt="GPL-3.0 license">
+  </a>
+  <img src="https://img.shields.io/badge/Rust-CLI-8B5CF6?style=flat-square&labelColor=111827" alt="Rust CLI">
+  <img src="https://img.shields.io/badge/terminal-timer-A855F7?style=flat-square&labelColor=111827" alt="Terminal timer">
+  <a href="https://ko-fi.com/rezky">
+    <img src="https://img.shields.io/badge/Ko--fi-support-7C3AED?style=flat-square&logo=kofi&logoColor=white&labelColor=111827" alt="Support on Ko-fi">
+  </a>
+</p>
+
 
 ## Examples
 
