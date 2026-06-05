@@ -5,9 +5,33 @@ name: CI
   push:
     branches:
       - main
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build.rs'
+      - 'rust-toolchain*'
+      - 'build.sh'
+      - 'scripts/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'benches/**'
+      - 'examples/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build.rs'
+      - 'rust-toolchain*'
+      - 'build.sh'
+      - 'scripts/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'benches/**'
+      - 'examples/**'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 jobs:
