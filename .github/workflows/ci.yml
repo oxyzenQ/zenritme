@@ -6,32 +6,26 @@ name: CI
     branches:
       - main
     paths:
-      - 'Cargo.toml'
+      - '**/*.rs'
+      - '**/*.toml'
+      - '**/*.sh'
       - 'Cargo.lock'
       - 'build.rs'
       - 'rust-toolchain*'
-      - 'build.sh'
       - 'scripts/**'
-      - 'src/**'
-      - 'tests/**'
-      - 'benches/**'
-      - 'examples/**'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/**'
   pull_request:
     branches:
       - main
     paths:
-      - 'Cargo.toml'
+      - '**/*.rs'
+      - '**/*.toml'
+      - '**/*.sh'
       - 'Cargo.lock'
       - 'build.rs'
       - 'rust-toolchain*'
-      - 'build.sh'
       - 'scripts/**'
-      - 'src/**'
-      - 'tests/**'
-      - 'benches/**'
-      - 'examples/**'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 jobs:
