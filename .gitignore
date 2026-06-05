@@ -1,5 +1,21 @@
-# Basic
-guide*.md
-example*
-/target
-worklog.md
+# Rust
+target/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+*~
