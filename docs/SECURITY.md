@@ -80,10 +80,18 @@ ensure terminal safety:
 - **Raw mode** is entered for single-keypress input and fully reversed on
   exit.
 - A `stty sane` fallback is available if the exact state restore fails.
-- **Ctrl+C (SIGINT)** triggers Rust's default unwind path, which drops all
-  locals including `TerminalGuard` and `TempCleanupGuard`, so terminal state
-  and temp files are cleaned up. A `SIGKILL` bypasses all cleanup — this is
-  a limitation of signal-level termination, not a bug.
+- The recommended way to exit is pressing `q` or `Esc`, which returns from
+  the main loop and reliably drops all guards (`TerminalGuard`,
+  `TempCleanupGuard`), restoring terminal state and removing temp files.
+- **Panic unwind** may also fire the `Drop` implementations, depending on
+  whether the panic is caught or aborts the process.
+- **Unhandled SIGINT (Ctrl+C)** and **SIGKILL (`kill -9`)** are
+  signal-level terminations that may bypass Rust's `Drop` cleanup entirely.
+  The terminal may be left in raw mode or alternate-screen state.
+- If the terminal appears stuck after a signal termination, press `Ctrl+J`
+  then type `stty sane` and press Enter, or simply open a new terminal
+  window. This is a fundamental limitation of signal handling, not a bug
+  in Zenritme.
 
 ## Long-running stability
 

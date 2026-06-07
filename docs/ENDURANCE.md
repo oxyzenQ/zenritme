@@ -90,22 +90,32 @@ After the process exits (normally or via signal), verify that:
 ### Temp sound cleanup
 
 - No `zenritme-sounds-*` directories should remain under `/tmp/` after the
-  process exits normally. The RAII cleanup guard removes the PID-specific temp
-  directory on all exit paths (normal return, panic unwind, and signal).
+  process exits via `q`/`Esc` or panic unwind. Signal-level termination
+  (SIGINT, SIGKILL) may bypass RAII cleanup — any leftover directories
+  are harmless and can be removed manually.
 
 ### Log output
 
 - If you redirect stderr to a file (`2>endurance.log`), check for any warnings,
   error messages, or unexpected output over time.
 
-## Ctrl+C caveat
+## Signal termination caveat
 
-Zenritme's terminal cleanup relies on Rust's `Drop` semantics for `TerminalGuard`
-and `TempCleanupGuard`. On a normal quit (`q`/`Esc`), these guards fire reliably.
-On Ctrl+C (SIGINT), Rust's default signal handling unwinds the stack and drops
-all locals, so cleanup still fires. However, a SIGKILL (`kill -9`) bypasses all
-cleanup — the terminal may be left in raw mode. This is a limitation of
-signal-level termination and not a bug in Zenritme.
+Zenritme's terminal cleanup relies on Rust's `Drop` semantics for
+`TerminalGuard` and `TempCleanupGuard`. These guards fire reliably on a
+normal quit (`q`/`Esc`). Panic unwind *may* also trigger them, depending on
+whether the panic is caught or aborts the process.
+
+However, **unhandled SIGINT (Ctrl+C)** and **SIGKILL (`kill -9`)** are
+signal-level terminations that may bypass `Drop` entirely. The terminal may
+be left in raw mode or alternate-screen state, and temp files may remain.
+This is a fundamental limitation of POSIX signal handling, not a bug in
+Zenritme.
+
+**Recommendation:** Always exit with `q` or `Esc` for a guaranteed clean
+terminal restore. If the terminal appears stuck after a signal termination,
+press `Ctrl+J` then type `stty sane` and press Enter, or open a new
+terminal window.
 
 ## Interpreting results
 
@@ -114,5 +124,5 @@ signal-level termination and not a bug in Zenritme.
 | Clean exit, stable RSS, terminal restored | Pass | No action needed |
 | Clean exit but RSS grew significantly | Investigate | Profile allocations, check for unbounded growth |
 | Panic on exit or signal | Fail | File an issue with backtrace |
-| Terminal not restored on signal | Fail | Investigate signal handling and TerminalGuard::drop |
+| Terminal not restored on signal | Expected | Use `q`/`Esc` for guaranteed clean exit; run `stty sane` if stuck |
 | Temp sound files remain after exit | Warn | Check TempCleanupGuard and RAII behavior |

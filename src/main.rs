@@ -18,8 +18,10 @@ use mode::PomodoroPhase;
 use std::sync::mpsc;
 
 fn main() {
-    // Register temp-file cleanup so embedded sounds are removed on any exit.
-    // This covers normal termination, panic unwinding, and Ctrl+C.
+    // Register temp-file cleanup so embedded sounds are removed on exit.
+    // TempCleanupGuard covers normal return and panic unwind.
+    // Signal termination (SIGINT, SIGKILL) may bypass Drop — see
+    // docs/ENDURANCE.md "Signal termination caveat" for details.
     let _cleanup_guard = sound::TempCleanupGuard::install();
 
     let cmd = match cli::parse_args(std::env::args().skip(1)) {

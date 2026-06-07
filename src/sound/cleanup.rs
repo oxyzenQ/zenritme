@@ -106,7 +106,10 @@ mod tests {
         if dir.exists() {
             let _ = std::fs::remove_dir_all(&dir);
         }
-        assert!(!dir.exists(), "test temp dir should be removed after cleanup");
+        assert!(
+            !dir.exists(),
+            "test temp dir should be removed after cleanup"
+        );
     }
 
     #[test]
