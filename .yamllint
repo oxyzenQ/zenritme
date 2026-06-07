@@ -1,0 +1,9 @@
+---
+extends: default
+rules:
+  # GitHub Actions requires 'on:' as a trigger keyword — it is not a truthy
+  # value being used as a boolean, so this rule must be disabled.
+  truthy: disable
+  line-length:
+    max: 120
+    level: warning

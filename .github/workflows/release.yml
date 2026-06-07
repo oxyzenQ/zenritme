@@ -52,11 +52,15 @@ jobs:
         run: |
           set -euo pipefail
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          CARGO_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          CARGO_VERSION=$(
+            grep '^version = ' Cargo.toml | head -1 \
+              | sed 's/version = "\(.*\)"/\1/'
+          )
           echo "Tag version:    ${TAG_VERSION}"
           echo "Cargo.toml:     ${CARGO_VERSION}"
           if [ "${TAG_VERSION}" != "${CARGO_VERSION}" ]; then
-            echo "::error::Tag version '${TAG_VERSION}' does not match Cargo.toml version '${CARGO_VERSION}'"
+            echo "::error::Tag version '${TAG_VERSION}'" \
+              "does not match Cargo.toml '${CARGO_VERSION}'"
             exit 1
           fi
           echo "VERSION=${TAG_VERSION}" >> "$GITHUB_ENV"
@@ -80,7 +84,8 @@ jobs:
           set -euo pipefail
           python3 scripts/generate-sounds.py
           for f in start pause phase complete; do
-            test -f "assets/sounds/${f}.wav" || { echo "Missing ${f}.wav"; exit 1; }
+            test -f "assets/sounds/${f}.wav" \
+              || { echo "Missing ${f}.wav"; exit 1; }
           done
           echo "All sound assets present and generated."
         shell: bash
@@ -95,8 +100,10 @@ jobs:
           set -euo pipefail
           HELP_OUTPUT=$(./target/release/zenritme --help)
           echo "${HELP_OUTPUT}"
-          if ! echo "${HELP_OUTPUT}" | head -1 | grep -q "zenritme v${VERSION}"; then
-            echo "::error::--help output does not include expected version 'zenritme v${VERSION}'"
+          if ! echo "${HELP_OUTPUT}" | head -1 \
+              | grep -q "zenritme v${VERSION}"; then
+            echo "::error::--help output does not include" \
+              " expected version 'zenritme v${VERSION}'"
             exit 1
           fi
           # Verify --version output
@@ -112,7 +119,8 @@ jobs:
           set -euo pipefail
           ARCHIVE_NAME="zenritme-v${VERSION}-x86_64-unknown-linux-gnu"
           STAGING="${ARCHIVE_NAME}"
-          mkdir -p "${STAGING}/scripts" "${STAGING}/docs" "${STAGING}/assets/sounds"
+          mkdir -p "${STAGING}/scripts" \
+            "${STAGING}/docs" "${STAGING}/assets/sounds"
           cp target/release/zenritme     "${STAGING}/"
           cp scripts/install.sh           "${STAGING}/scripts/"
           cp scripts/uninstall.sh         "${STAGING}/scripts/"
@@ -152,7 +160,8 @@ jobs:
             cat > release-notes.md << BODY
           ## Release Candidate
 
-          This is a pre-release build for testing. See [RULES.md](RULES.md) for project policies.
+          This is a pre-release build for testing.
+          See [RULES.md](RULES.md) for project policies.
 
           ### Changes
 
@@ -201,7 +210,8 @@ jobs:
 
           ## Assets
 
-          - \`zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz\` — release binary + docs
+          - \`zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz\`
+            — release binary + docs
           - \`SHA256SUMS\` — checksums
           BODY
           sed -i "s/VERSION/${VERSION}/g" release-notes.md
