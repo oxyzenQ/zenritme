@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 30
 
     env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       CARGO_TERM_COLOR: always
 
     steps:
@@ -75,6 +75,16 @@ jobs:
         run: bash scripts/check-loc.sh
         shell: bash
 
+      - name: Validate sound assets
+        run: |
+          set -euo pipefail
+          python3 scripts/generate-sounds.py
+          for f in start pause phase complete; do
+            test -f "assets/sounds/${f}.wav" || { echo "Missing ${f}.wav"; exit 1; }
+          done
+          echo "All sound assets present and generated."
+        shell: bash
+
       # ── Build ──────────────────────────────────────────────────────────
 
       - name: Build release binary
@@ -89,6 +99,10 @@ jobs:
             echo "::error::--help output does not include expected version 'zenritme v${VERSION}'"
             exit 1
           fi
+          # Verify --version output
+          ./target/release/zenritme -V
+          # Verify --sound-test runs without error
+          ./target/release/zenritme --sound-test
         shell: bash
 
       # ── Package ────────────────────────────────────────────────────────
@@ -98,10 +112,13 @@ jobs:
           set -euo pipefail
           ARCHIVE_NAME="zenritme-v${VERSION}-x86_64-unknown-linux-gnu"
           STAGING="${ARCHIVE_NAME}"
-          mkdir -p "${STAGING}/scripts" "${STAGING}/docs"
+          mkdir -p "${STAGING}/scripts" "${STAGING}/docs" "${STAGING}/assets/sounds"
           cp target/release/zenritme     "${STAGING}/"
           cp scripts/install.sh           "${STAGING}/scripts/"
           cp scripts/uninstall.sh         "${STAGING}/scripts/"
+          cp scripts/generate-sounds.py   "${STAGING}/scripts/"
+          cp assets/sounds/*.wav           "${STAGING}/assets/sounds/"
+          cp assets/sounds/README.md      "${STAGING}/assets/sounds/"
           cp README.md                    "${STAGING}/"
           cp LICENSE                      "${STAGING}/"
           cp NOTICE.md                    "${STAGING}/"
@@ -135,22 +152,14 @@ jobs:
 
           This is a pre-release build for testing. See [RULES.md](RULES.md) for project policies.
 
-          ### Changes since v1.3.0
+          ### Changes
 
-          - Architecture split: \`cli.rs\` → \`cli/\` module folder (mod, duration, pomodoro)
-          - Architecture split: \`render.rs\` → \`render/\` module folder (mod, layout, views, progress, labels)
-          - Install and uninstall scripts with PREFIX/DESTDIR support
-          - Rich \`-V\`/\`--version\` output with build metadata and git hash
-          - Release archive includes scripts and full documentation
-          - CI release workflow supports rc and pre-release tags
-
-          ### Invariants
-
-          - Zero external Rust dependencies
-          - 175 tests, zero warnings
-          - LOC guard: all core files under 1000 lines
-          - Read-only `--check-update` with human-readable error messages
-          - Install and uninstall scripts with PREFIX/DESTDIR support
+          - Built-in procedural notification sounds (start, pause, phase, complete)
+          - \`--mute\` flag to suppress all notification sounds
+          - \`--sound-test\` upgrade: shows all 4 events with sources and overrides
+          - Per-event sound env overrides: \`ZENRITME_SOUND_START/PAUSE/PHASE/COMPLETE\`
+          - Zero new external dependencies
+          - 187 tests, zero warnings
 
           BODY
           else
@@ -160,11 +169,11 @@ jobs:
           - Premium terminal UI with themed rendering
           - 5 themes: void, ember, aura, forest, mono
           - 3 view modes: minimal, orbit, cinematic
-          - NO_COLOR support (per no-color.org)
+          - Built-in procedural notification sounds (no external audio files needed)
+          - \`--mute\` flag and per-event sound overrides
           - Zero external Rust dependencies
           - LOC guard enforced (all files under 1000 lines)
-          - 175 tests, zero warnings
-          - Read-only `--check-update` with human-readable error messages
+          - 187 tests, zero warnings
 
           BODY
           fi
