@@ -158,7 +158,7 @@ jobs:
           - No-spam cooldown: 500 ms pause, 1 s phase, 2 s complete debounce
           - Automatic temp-file cleanup on exit via RAII guard
           - Polished \`--sound-test\` with cooldown and profile info
-          - 225 tests, zero warnings
+          - 236 tests, zero warnings
 
           BODY
           else
@@ -168,13 +168,14 @@ jobs:
           - Premium terminal UI with themed rendering
           - 5 themes: void, ember, aura, forest, mono
           - 3 view modes: minimal, orbit, cinematic
+          - Ritual sound architecture: split into focused submodules
           - Built-in procedural notification sounds with no-spam cooldown
           - Sound profiles: \`--sound-profile calm|silent\`
           - Automatic temp-file cleanup on process exit
           - Per-event sound overrides and \`--mute\` flag
           - Zero external Rust dependencies
           - LOC guard enforced (all files under 1000 lines)
-          - 225 tests, zero warnings
+          - 236 tests, zero warnings
 
           BODY
           fi

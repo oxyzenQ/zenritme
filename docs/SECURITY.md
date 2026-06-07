@@ -59,8 +59,13 @@ resolves override paths via `std::env::var` and passes them directly to
 A no-spam cooldown system prevents rapid sound toggling from producing
 audible spam (500 ms pause, 1 s phase, 2 s complete debounce). Sound
 profiles (`--sound-profile calm|silent`) provide session-wide control.
-Temp sound files are automatically cleaned up on process exit via an RAII
-guard (`TempCleanupGuard`).
+
+The sound system is organized into focused submodules (`src/sound/assets.rs`,
+`src/sound/playback.rs`, `src/sound/resolve.rs`, `src/sound/cooldown.rs`,
+`src/sound/cleanup.rs`) for auditability. Temp sound files are automatically
+cleaned up on process exit via an RAII guard (`TempCleanupGuard`). The cleanup
+is PID-specific and only targets the `zenritme-sounds-{PID}` directory under
+the system temp folder — it never touches user files outside that scope.
 
 ## Terminal safety
 

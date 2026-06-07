@@ -66,7 +66,7 @@ Duration format: `30s`, `10m`, `1h`
 
 ```sh
 $ zenritme -V
-Version: v2.2.0
+Version: v3.0.0
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 Rezky_nightky
 License: GPL-3.0-only
@@ -83,8 +83,8 @@ binaries.
 ```sh
 $ zenritme --check-update
 zenritme update check
-Current: v2.2.0
-Latest:  v2.2.0
+Current: v3.0.0
+Latest:  v3.0.0
 Status:  up to date
 Source:  https://github.com/oxyzenq/zenritme/releases/latest
 ```
@@ -118,12 +118,14 @@ Session flow: FOCUS 1/N → SHORT BREAK 1/N → … → FOCUS N/N → LONG BREAK
 | `p` | Pause / resume |
 | `r` | Reset current session |
 
-### Sound system
+### Sound system (Ritual Sound — v3.0.0)
 
-Zenritme v2.2.0 bundles four built-in procedural notification sounds,
-embedded directly into the binary at compile time. No external audio files
-or network access are required. A no-spam cooldown system prevents rapid
-sound toggling from producing audible spam.
+Zenritme v3.0.0 ships a mature ritual sound architecture with four built-in
+procedural notification sounds, embedded directly into the binary at compile
+time. No external audio files or network access are required. The sound system
+is split into focused submodules (assets, playback, resolve, cooldown, cleanup)
+for long-term maintainability. A no-spam cooldown system prevents rapid sound
+toggling from producing audible spam.
 
 | Event | File | Duration | Description |
 |-------|------|----------|-------------|
@@ -179,7 +181,20 @@ zenritme --pomodoro --sound-profile calm    # explicit calm (default)
 zenritme --sound-test                 # preview all sounds
 ```
 
-Temp sound files are automatically cleaned up on process exit via an RAII guard.
+Temp sound files are automatically cleaned up on process exit via an RAII
+guard. The cleanup is PID-specific and project-specific, ensuring only
+Zenritme's own temp files are removed. Cleanup is idempotent and safe across
+panics, Ctrl+C, and normal exit paths.
+
+**Sound module architecture (v3.0.0):**
+
+| Module | Responsibility |
+|--------|---------------|
+| `assets` | Embedded WAV data via `include_bytes!`, env var names, asset metadata |
+| `playback` | `pw-play` invocation, terminal bell, visual bell |
+| `resolve` | Env override resolution, source display |
+| `cooldown` | No-spam cooldown rules and debounce logic |
+| `cleanup` | Temp file lifecycle, RAII `TempCleanupGuard` |
 
 ### Options
 
