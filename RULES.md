@@ -99,3 +99,21 @@ Network access in Zenritme is **opt-in and read-only by default**:
   `--max-time`) to prevent indefinite hanging.
 - **No shell interpolation** — URLs and request parameters must be compile-time
   constants; user input must never be interpolated into commands.
+
+## Generated assets policy
+
+Assets that are generated programmatically (e.g., sound files, images) must
+satisfy the following requirements:
+
+- **Reproducible from scripts** — every generated asset must have a
+  corresponding generator script under `scripts/` (e.g.,
+  `scripts/generate-sounds.py`).
+- **No external dependencies** — generator scripts must use only standard
+  library modules (no `pip install`, no downloaded tools).
+- **No downloaded content** — generated assets must be produced entirely from
+  code (sine-wave math, algorithmic patterns, etc.). No external files, URLs,
+  or network access during generation.
+- **No copyrighted material** — generated assets must be original and free of
+  third-party intellectual property.
+- **Deterministic output** — re-running the generator with the same script
+  must produce identical output (same checksums).

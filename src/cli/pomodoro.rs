@@ -80,6 +80,7 @@ pub(super) fn resolve_mode<I>(
     pomo: super::PomodoroOpts,
     theme: Theme,
     view: ViewMode,
+    mute: bool,
 ) -> Result<super::Command, String>
 where
     I: Iterator<Item = String>,
@@ -132,6 +133,7 @@ where
         },
         theme,
         view,
+        mute,
     })
 }
 
@@ -287,7 +289,10 @@ mod tests {
             "cinematic",
         ]))
         .unwrap();
-        if let Command::Run { mode, theme, view } = cmd {
+        if let Command::Run {
+            mode, theme, view, ..
+        } = cmd
+        {
             if let Mode::Pomodoro {
                 focus,
                 short_break,

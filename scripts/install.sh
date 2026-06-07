@@ -24,6 +24,7 @@ readonly PROJECT_NAME="zenritme"
 PREFIX="${PREFIX:-/usr/local}"
 DESTDIR="${DESTDIR:-}"
 BINDIR="${DESTDIR}${PREFIX}/bin"
+DATADIR="${DESTDIR}${PREFIX}/share/${PROJECT_NAME}"
 
 # --- Locate binary -----------------------------------------------------------
 
@@ -39,7 +40,7 @@ if [ ! -f "${BINARY}" ]; then
     exit 1
 fi
 
-# --- Install -----------------------------------------------------------------
+# --- Install binary ----------------------------------------------------------
 
 mkdir -p "${BINDIR}"
 
@@ -47,3 +48,16 @@ cp "${BINARY}" "${BINDIR}/${PROJECT_NAME}"
 chmod 755 "${BINDIR}/${PROJECT_NAME}"
 
 echo "Installed ${PROJECT_NAME} to ${BINDIR}/${PROJECT_NAME}"
+
+# --- Install sound assets (optional, non-fatal) ------------------------------
+
+SOUND_SRC="${PROJECT_ROOT}/assets/sounds"
+if [ -d "${SOUND_SRC}" ]; then
+    mkdir -p "${DATADIR}/sounds"
+    for wav in "${SOUND_SRC}"/*.wav; do
+        [ -f "$wav" ] || continue
+        cp "$wav" "${DATADIR}/sounds/"
+        echo "  Installed sound: $(basename "$wav")"
+    done
+    echo "Sound assets installed to ${DATADIR}/sounds/"
+fi

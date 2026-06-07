@@ -18,6 +18,7 @@ pub enum Command {
         mode: Mode,
         theme: Theme,
         view: ViewMode,
+        mute: bool,
     },
     SoundTest,
 }
@@ -47,6 +48,7 @@ pub fn usage() -> String {
          Options:\n\
          \x20 --theme <THEME>          void | ember | aura | forest | mono  (default: void)\n\
          \x20 --view <VIEW>            minimal | orbit | cinematic             (default: orbit)\n\
+         \x20 --mute                   suppress all notification sounds       (default: off)\n\
          \x20 --focus <DURATION>       focus session length                   (default: 25m)\n\
          \x20 --break <DURATION>       short break length                    (default: 5m)\n\
          \x20 --long-break <DURATION>  long break length                     (default: 15m)\n\
@@ -62,7 +64,14 @@ pub fn usage() -> String {
          Controls while running:\n\
          \x20 q / Esc   quit\n\
          \x20 p         pause / resume\n\
-         \x20 r         reset current session",
+         \x20 r         reset current session\n\n\
+         Sound environment variables:\n\
+         \x20 ZENRITME_SOUND_START     override start sound file\n\
+         \x20 ZENRITME_SOUND_PAUSE     override pause sound file\n\
+         \x20 ZENRITME_SOUND_PHASE     override phase sound file\n\
+         \x20 ZENRITME_SOUND_COMPLETE  override complete sound file\n\
+         \x20 ZENRITME_SOUND_FILE      global fallback for all events\n\
+         \x20 ZENRITME_VISUAL_BELL=1   enable visual bell (screen flash)",
         ver = env!("CARGO_PKG_VERSION")
     )
 }
@@ -77,6 +86,7 @@ where
 
     let mut theme = Theme::Void;
     let mut view = ViewMode::Orbit;
+    let mut mute = false;
     let mut pomodoro_opts = PomodoroOpts::default();
     let mut mode_args: Vec<String> = Vec::new();
     let mut i = 0;
@@ -99,6 +109,10 @@ where
                     .ok_or_else(|| format!("unknown view: {}  (see --help)", val))?;
                 i += 2;
             }
+            "--mute" => {
+                mute = true;
+                i += 1;
+            }
             _ => {
                 if !pomodoro::extract_flag(&all, &mut i, &mut pomodoro_opts)? {
                     mode_args.push(all[i].clone());
@@ -108,7 +122,7 @@ where
         }
     }
 
-    parse_mode(mode_args.into_iter(), theme, view, pomodoro_opts)
+    parse_mode(mode_args.into_iter(), theme, view, mute, pomodoro_opts)
 }
 
 /// Parse the mode-specific arguments (after pre-pass extraction).
@@ -116,6 +130,7 @@ fn parse_mode<I>(
     mut args: I,
     theme: Theme,
     view: ViewMode,
+    mute: bool,
     pomo: PomodoroOpts,
 ) -> Result<Command, String>
 where
@@ -152,6 +167,7 @@ where
                 mode: Mode::TimerUp,
                 theme,
                 view,
+                mute,
             })
         }
 
@@ -161,10 +177,11 @@ where
                 mode: Mode::Stopwatch,
                 theme,
                 view,
+                mute,
             })
         }
 
-        "--pomodoro" => pomodoro::resolve_mode(args, pomo, theme, view),
+        "--pomodoro" => pomodoro::resolve_mode(args, pomo, theme, view, mute),
 
         "--timer-down" | "--timer-back" => {
             let Some(dur_str) = args.next() else {
@@ -179,6 +196,7 @@ where
                 mode: Mode::TimerDown { total: dur },
                 theme,
                 view,
+                mute,
             })
         }
 

@@ -44,17 +44,23 @@ fn main() {
         cli::Command::SoundTest => {
             sound::sound_test();
         }
-        cli::Command::Run { mode, theme, view } => {
-            run(mode, theme, view);
+        cli::Command::Run {
+            mode,
+            theme,
+            view,
+            mute,
+        } => {
+            run(mode, theme, view, mute);
         }
     }
 }
 
-fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode) {
+fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode, mute: bool) {
     let (_term, rx) = terminal::spawn_input();
     let mut engine = engine::Engine::new(mode);
     let colors = theme.colors();
     let mut frame: u64 = 0;
+    let mut session_started = false;
 
     loop {
         // ── Process keypresses ────────────────────────────────────────────────
@@ -65,7 +71,12 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode) {
                     b'q' | b'Q' | 3 => return,
 
                     // Pause / resume (no-op when Completed)
-                    b'p' | b'P' => engine.toggle_pause(),
+                    b'p' | b'P' => {
+                        engine.toggle_pause();
+                        if !mute {
+                            sound::play_event(sound::SoundEvent::Pause);
+                        }
+                    }
 
                     // Reset current session
                     b'r' | b'R' => engine.reset(),
@@ -86,6 +97,14 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode) {
 
         // ── Advance engine ────────────────────────────────────────────────────
         engine.tick();
+
+        // ── Start sound (once per session) ───────────────────────────────────
+        if !session_started {
+            session_started = true;
+            if !mute {
+                sound::play_event(sound::SoundEvent::Start);
+            }
+        }
 
         let state = render::RenderState {
             mode: engine.mode(),
@@ -116,16 +135,20 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode) {
         render::draw(&state);
 
         // ── Handle events ─────────────────────────────────────────────────────
-        if let Some(ev) = engine.take_event() {
-            match ev {
-                engine::EngineEvent::Completed => {
-                    sound::beep(3);
-                    // Stay in the loop — display [ DONE ] until user quits.
-                }
-                engine::EngineEvent::PhaseSwitched => {
-                    sound::beep(1);
+        if !mute {
+            if let Some(ev) = engine.take_event() {
+                match ev {
+                    engine::EngineEvent::Completed => {
+                        sound::play_event(sound::SoundEvent::Complete);
+                    }
+                    engine::EngineEvent::PhaseSwitched => {
+                        sound::play_event(sound::SoundEvent::Phase);
+                    }
                 }
             }
+        } else {
+            // Still consume the event to prevent stale events after unmute-like resets
+            let _ = engine.take_event();
         }
 
         frame += 1;
