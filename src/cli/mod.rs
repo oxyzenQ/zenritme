@@ -19,6 +19,7 @@ pub enum Command {
         theme: Theme,
         view: ViewMode,
         mute: bool,
+        profile: crate::sound::SoundProfile,
     },
     SoundTest,
 }
@@ -48,6 +49,7 @@ pub fn usage() -> String {
          Options:\n\
          \x20 --theme <THEME>          void | ember | aura | forest | mono  (default: void)\n\
          \x20 --view <VIEW>            minimal | orbit | cinematic             (default: orbit)\n\
+         \x20 --sound-profile <P>    calm | silent                          (default: calm)\n\
          \x20 --mute                   suppress all notification sounds       (default: off)\n\
          \x20 --focus <DURATION>       focus session length                   (default: 25m)\n\
          \x20 --break <DURATION>       short break length                    (default: 5m)\n\
@@ -87,6 +89,7 @@ where
     let mut theme = Theme::Void;
     let mut view = ViewMode::Orbit;
     let mut mute = false;
+    let mut profile = crate::sound::SoundProfile::Calm;
     let mut pomodoro_opts = PomodoroOpts::default();
     let mut mode_args: Vec<String> = Vec::new();
     let mut i = 0;
@@ -113,6 +116,14 @@ where
                 mute = true;
                 i += 1;
             }
+            "--sound-profile" => {
+                let val = all
+                    .get(i + 1)
+                    .ok_or("missing value after --sound-profile".to_string())?;
+                profile = crate::sound::SoundProfile::from_name(val)
+                    .ok_or_else(|| format!("unknown sound profile: {}  (see --help)", val))?;
+                i += 2;
+            }
             _ => {
                 if !pomodoro::extract_flag(&all, &mut i, &mut pomodoro_opts)? {
                     mode_args.push(all[i].clone());
@@ -122,7 +133,14 @@ where
         }
     }
 
-    parse_mode(mode_args.into_iter(), theme, view, mute, pomodoro_opts)
+    parse_mode(
+        mode_args.into_iter(),
+        theme,
+        view,
+        mute,
+        profile,
+        pomodoro_opts,
+    )
 }
 
 /// Parse the mode-specific arguments (after pre-pass extraction).
@@ -131,6 +149,7 @@ fn parse_mode<I>(
     theme: Theme,
     view: ViewMode,
     mute: bool,
+    profile: crate::sound::SoundProfile,
     pomo: PomodoroOpts,
 ) -> Result<Command, String>
 where
@@ -168,6 +187,7 @@ where
                 theme,
                 view,
                 mute,
+                profile,
             })
         }
 
@@ -178,10 +198,11 @@ where
                 theme,
                 view,
                 mute,
+                profile,
             })
         }
 
-        "--pomodoro" => pomodoro::resolve_mode(args, pomo, theme, view, mute),
+        "--pomodoro" => pomodoro::resolve_mode(args, pomo, theme, view, mute, profile),
 
         "--timer-down" | "--timer-back" => {
             let Some(dur_str) = args.next() else {
@@ -197,6 +218,7 @@ where
                 theme,
                 view,
                 mute,
+                profile,
             })
         }
 
@@ -503,5 +525,122 @@ mod tests {
             parse_args(args(&["--check-updated"])),
             Ok(Command::CheckUpdate)
         ));
+    }
+
+    // ── --mute flag ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn mute_flag_parsed() {
+        let cmd = parse_args(args(&["--mute", "--timer-up"])).unwrap();
+        if let Command::Run { mute, .. } = cmd {
+            assert!(mute);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn mute_default_is_false() {
+        let cmd = parse_args(args(&["--timer-up"])).unwrap();
+        if let Command::Run { mute, .. } = cmd {
+            assert!(!mute);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn mute_flag_after_mode() {
+        let cmd = parse_args(args(&["--timer-up", "--mute"])).unwrap();
+        if let Command::Run { mute, .. } = cmd {
+            assert!(mute);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    // ── --sound-profile flag ─────────────────────────────────────────────────
+
+    #[test]
+    fn sound_profile_silent_parsed() {
+        let cmd = parse_args(args(&["--sound-profile", "silent", "--timer-up"])).unwrap();
+        if let Command::Run { profile, .. } = cmd {
+            assert_eq!(profile, crate::sound::SoundProfile::Silent);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn sound_profile_calm_parsed() {
+        let cmd = parse_args(args(&["--sound-profile", "calm", "--timer-up"])).unwrap();
+        if let Command::Run { profile, .. } = cmd {
+            assert_eq!(profile, crate::sound::SoundProfile::Calm);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn sound_profile_default_is_calm() {
+        let cmd = parse_args(args(&["--timer-up"])).unwrap();
+        if let Command::Run { profile, .. } = cmd {
+            assert_eq!(profile, crate::sound::SoundProfile::Calm);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn sound_profile_unknown_rejected() {
+        assert!(parse_args(args(&["--sound-profile", "loud", "--timer-up"])).is_err());
+    }
+
+    #[test]
+    fn sound_profile_missing_value_rejected() {
+        assert!(parse_args(args(&["--sound-profile"])).is_err());
+    }
+
+    #[test]
+    fn sound_profile_case_insensitive() {
+        let cmd = parse_args(args(&["--sound-profile", "Silent", "--timer-up"])).unwrap();
+        if let Command::Run { profile, .. } = cmd {
+            assert_eq!(profile, crate::sound::SoundProfile::Silent);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn mute_overrides_silent_profile() {
+        // --mute + --sound-profile silent → both should be set; runtime resolves.
+        let cmd = parse_args(args(&["--mute", "--sound-profile", "silent", "--timer-up"])).unwrap();
+        if let Command::Run { mute, profile, .. } = cmd {
+            assert!(mute, "--mute should be true");
+            assert_eq!(profile, crate::sound::SoundProfile::Silent);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn mute_overrides_calm_profile() {
+        let cmd = parse_args(args(&["--mute", "--sound-profile", "calm", "--timer-up"])).unwrap();
+        if let Command::Run { mute, profile, .. } = cmd {
+            assert!(mute, "--mute should be true");
+            assert_eq!(profile, crate::sound::SoundProfile::Calm);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn sound_profile_with_pomodoro() {
+        let cmd = parse_args(args(&["--sound-profile", "silent", "--pomodoro"])).unwrap();
+        if let Command::Run { profile, .. } = cmd {
+            assert_eq!(profile, crate::sound::SoundProfile::Silent);
+        } else {
+            panic!("expected Run");
+        }
     }
 }

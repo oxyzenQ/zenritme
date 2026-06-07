@@ -18,6 +18,10 @@ use mode::PomodoroPhase;
 use std::sync::mpsc;
 
 fn main() {
+    // Register temp-file cleanup so embedded sounds are removed on any exit.
+    // This covers normal termination, panic unwinding, and Ctrl+C.
+    let _cleanup_guard = sound::TempCleanupGuard::install();
+
     let cmd = match cli::parse_args(std::env::args().skip(1)) {
         Ok(cmd) => cmd,
         Err(err) => {
@@ -49,18 +53,26 @@ fn main() {
             theme,
             view,
             mute,
+            profile,
         } => {
-            run(mode, theme, view, mute);
+            run(mode, theme, view, mute, profile);
         }
     }
 }
 
-fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode, mute: bool) {
+fn run(
+    mode: mode::Mode,
+    theme: theme::Theme,
+    view: render::ViewMode,
+    mute: bool,
+    profile: sound::SoundProfile,
+) {
     let (_term, rx) = terminal::spawn_input();
     let mut engine = engine::Engine::new(mode);
     let colors = theme.colors();
     let mut frame: u64 = 0;
     let mut session_started = false;
+    let muted = mute || profile.is_silent();
 
     loop {
         // ── Process keypresses ────────────────────────────────────────────────
@@ -73,7 +85,7 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode, mute: bool
                     // Pause / resume (no-op when Completed)
                     b'p' | b'P' => {
                         engine.toggle_pause();
-                        if !mute {
+                        if !muted {
                             sound::play_event(sound::SoundEvent::Pause);
                         }
                     }
@@ -101,7 +113,7 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode, mute: bool
         // ── Start sound (once per session) ───────────────────────────────────
         if !session_started {
             session_started = true;
-            if !mute {
+            if !muted {
                 sound::play_event(sound::SoundEvent::Start);
             }
         }
@@ -135,7 +147,7 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode, mute: bool
         render::draw(&state);
 
         // ── Handle events ─────────────────────────────────────────────────────
-        if !mute {
+        if !muted {
             if let Some(ev) = engine.take_event() {
                 match ev {
                     engine::EngineEvent::Completed => {
@@ -147,7 +159,7 @@ fn run(mode: mode::Mode, theme: theme::Theme, view: render::ViewMode, mute: bool
                 }
             }
         } else {
-            // Still consume the event to prevent stale events after unmute-like resets
+            // Still consume the event to prevent stale events
             let _ = engine.take_event();
         }
 

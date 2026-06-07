@@ -81,6 +81,7 @@ pub(super) fn resolve_mode<I>(
     theme: Theme,
     view: ViewMode,
     mute: bool,
+    profile: crate::sound::SoundProfile,
 ) -> Result<super::Command, String>
 where
     I: Iterator<Item = String>,
@@ -134,6 +135,7 @@ where
         theme,
         view,
         mute,
+        profile,
     })
 }
 

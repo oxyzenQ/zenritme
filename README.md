@@ -66,7 +66,7 @@ Duration format: `30s`, `10m`, `1h`
 
 ```sh
 $ zenritme -V
-Version: v2.1.0
+Version: v2.2.0
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 Rezky_nightky
 License: GPL-3.0-only
@@ -83,8 +83,8 @@ binaries.
 ```sh
 $ zenritme --check-update
 zenritme update check
-Current: v2.1.0
-Latest:  v2.1.0
+Current: v2.2.0
+Latest:  v2.2.0
 Status:  up to date
 Source:  https://github.com/oxyzenq/zenritme/releases/latest
 ```
@@ -120,9 +120,10 @@ Session flow: FOCUS 1/N → SHORT BREAK 1/N → … → FOCUS N/N → LONG BREAK
 
 ### Sound system
 
-Zenritme v2.1.0 bundles four built-in procedural notification sounds,
+Zenritme v2.2.0 bundles four built-in procedural notification sounds,
 embedded directly into the binary at compile time. No external audio files
-or network access are required.
+or network access are required. A no-spam cooldown system prevents rapid
+sound toggling from producing audible spam.
 
 | Event | File | Duration | Description |
 |-------|------|----------|-------------|
@@ -138,6 +139,24 @@ standard library — pure sine-wave math, no samples, no copyrighted content.
 If unavailable or playback fails, it falls back to the terminal bell (`\x07`).
 If `ZENRITME_VISUAL_BELL=1` is set, a screen flash is also triggered.
 
+**No-spam cooldowns** prevent sound spam on rapid toggling:
+
+| Event | Cooldown | Reason |
+|-------|----------|--------|
+| Start | None | One-shot, fires once per session |
+| Pause | 500 ms | Debounce on rapid pause toggle |
+| Phase | 1 s | Debounce on phase switch |
+| Complete | 2 s | Prevents repeated completion sounds |
+
+**Sound profiles** control when notification sounds play:
+
+| Profile | Behavior |
+|---------|----------|
+| `calm` (default) | All notification sounds enabled |
+| `silent` | All notification sounds suppressed |
+
+The `--mute` flag overrides any profile to silent.
+
 **Per-event overrides** via environment variables:
 
 ```
@@ -151,22 +170,28 @@ ZENRITME_SOUND_FILE      /path/to/global-fallback.wav
 Resolution order: event-specific env → global env → built-in.
 
 **`--mute` flag** suppresses all notification sounds for the session.
+**`--sound-profile` flag** selects a sound profile (`calm` or `silent`).
 
 ```sh
 zenritme --pomodoro --mute             # run silently
+zenritme --pomodoro --sound-profile silent  # same as --mute
+zenritme --pomodoro --sound-profile calm    # explicit calm (default)
 zenritme --sound-test                 # preview all sounds
 ```
+
+Temp sound files are automatically cleaned up on process exit via an RAII guard.
 
 ### Options
 
 ```
---theme <THEME>    void | ember | aura | forest | mono  (default: void)
---view <VIEW>      minimal | orbit | cinematic             (default: orbit)
---mute             suppress all notification sounds       (default: off)
---focus <DURATION> focus session length                   (default: 25m)
---break <DURATION> short break length                    (default: 5m)
---long-break <DURATION>  long break length               (default: 15m)
---cycles <N>       focus sessions per round               (default: 4)
+--theme <THEME>          void | ember | aura | forest | mono  (default: void)
+--view <VIEW>            minimal | orbit | cinematic             (default: orbit)
+--sound-profile <P>    calm | silent                          (default: calm)
+--mute                   suppress all notification sounds       (default: off)
+--focus <DURATION>       focus session length                   (default: 25m)
+--break <DURATION>       short break length                    (default: 5m)
+--long-break <DURATION>  long break length                     (default: 15m)
+--cycles <N>             focus sessions per round               (default: 4)
 ```
 
 ## Install

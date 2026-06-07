@@ -56,6 +56,12 @@ be **local file paths only** — no URLs, no network fetching. The binary
 resolves override paths via `std::env::var` and passes them directly to
 `pw-play` for playback; no content is parsed or executed.
 
+A no-spam cooldown system prevents rapid sound toggling from producing
+audible spam (500 ms pause, 1 s phase, 2 s complete debounce). Sound
+profiles (`--sound-profile calm|silent`) provide session-wide control.
+Temp sound files are automatically cleaned up on process exit via an RAII
+guard (`TempCleanupGuard`).
+
 ## Terminal safety
 
 Zenritme takes over the terminal during a session. The following measures

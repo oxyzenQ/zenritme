@@ -26,3 +26,4 @@ codex/
 agent/
 other ai/
 __pycache__/*.pyc
+scripts/__pycache__/

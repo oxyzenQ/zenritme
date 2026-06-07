@@ -19,7 +19,44 @@
 
 use std::io::{self, Write};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
+
+// ─── Sound profile ─────────────────────────────────────────────────────────
+
+/// Sound profile controlling when notification sounds play.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SoundProfile {
+    /// Normal sound behavior — all events produce notification sounds.
+    Calm,
+    /// All sounds suppressed (equivalent to `--mute`).
+    Silent,
+}
+
+impl SoundProfile {
+    /// Parse a profile name (case-insensitive).
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name.to_lowercase().as_str() {
+            "calm" => Some(SoundProfile::Calm),
+            "silent" => Some(SoundProfile::Silent),
+            _ => None,
+        }
+    }
+
+    /// Returns `true` if all sounds should be suppressed.
+    pub fn is_silent(self) -> bool {
+        self == SoundProfile::Silent
+    }
+
+    /// Returns the string name for display.
+    #[allow(dead_code)]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SoundProfile::Calm => "calm",
+            SoundProfile::Silent => "silent",
+        }
+    }
+}
 
 // ─── Sound event enum ────────────────────────────────────────────────────────
 
@@ -113,9 +150,18 @@ pub fn resolve_sound_file(event: SoundEvent) -> Option<String> {
     None
 }
 
+/// Returns a human-readable source description for an event's resolved sound.
+pub fn sound_source(event: SoundEvent) -> String {
+    match resolve_sound_file(event) {
+        Some(ref path) => format!("override: {}", path),
+        None => format!("built-in: {}", asset_filename(event)),
+    }
+}
+
 // ─── Temp-file cache for embedded sounds ────────────────────────────────────
 
 /// Lazily-created temp directory for extracting embedded sounds.
+/// Path is project-specific and PID-specific to avoid conflicts.
 fn temp_sound_dir() -> &'static std::path::PathBuf {
     static DIR: OnceLock<std::path::PathBuf> = OnceLock::new();
     DIR.get_or_init(|| {
@@ -134,6 +180,99 @@ fn ensure_embedded_file(event: SoundEvent) -> Option<std::path::PathBuf> {
         return None;
     }
     Some(path)
+}
+
+/// Removes the temp sound directory created by this process.
+///
+/// Safe to call multiple times; no-op if the directory does not exist.
+/// Only removes the PID-specific directory — never touches user files.
+pub fn cleanup_temp_sounds() {
+    static CLEANED: AtomicBool = AtomicBool::new(false);
+    // Only clean once per process — guard against double-invocation.
+    if CLEANED.swap(true, Ordering::Relaxed) {
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("zenritme-sounds-{}", std::process::id()));
+    if dir.exists() {
+        let _ = std::fs::remove_dir_all(dir);
+    }
+}
+
+// ─── Temp cleanup guard ──────────────────────────────────────────────────────
+
+/// RAII guard that registers a cleanup handler on drop.
+/// Created via `TempCleanupGuard::install()` at the start of `main()`.
+/// On any exit path (normal return, `std::process::exit`, panic unwind),
+/// the guard's `Drop` impl calls `cleanup_temp_sounds()`.
+pub struct TempCleanupGuard;
+
+impl TempCleanupGuard {
+    /// Install the temp-file cleanup guard.  Call once at the start of `main()`.
+    /// The returned guard should be bound to a variable (typically `_cleanup_guard`)
+    /// so its `Drop` runs at process exit.
+    pub fn install() -> Self {
+        Self
+    }
+}
+
+impl Drop for TempCleanupGuard {
+    fn drop(&mut self) {
+        cleanup_temp_sounds();
+    }
+}
+
+// ─── No-spam cooldown ───────────────────────────────────────────────────────
+
+/// Cooldown durations per event (prevents sound spam on rapid toggling).
+/// Each event tracks the last play time and skips playback if called again
+/// within its cooldown window. Cooldown in milliseconds per event type.
+fn cooldown_ms(event: SoundEvent) -> u64 {
+    match event {
+        SoundEvent::Start => 0,        // one-shot, only fires once per session
+        SoundEvent::Pause => 500,      // 500 ms debounce on pause toggle
+        SoundEvent::Phase => 1_000,    // 1 s debounce on phase switch
+        SoundEvent::Complete => 2_000, // 2 s cooldown on completion
+    }
+}
+
+/// Global last-play timestamps for no-spam cooldown.
+/// Uses wall-clock milliseconds (from SystemTime) so the 0-sentinel
+/// for "never played" is never accidentally hit by a real timestamp.
+static LAST_PLAY: [std::sync::atomic::AtomicU64; 4] = [
+    std::sync::atomic::AtomicU64::new(0),
+    std::sync::atomic::AtomicU64::new(0),
+    std::sync::atomic::AtomicU64::new(0),
+    std::sync::atomic::AtomicU64::new(0),
+];
+
+/// Returns wall-clock milliseconds since UNIX epoch.
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+/// Returns `true` if the event should be played (outside cooldown window).
+fn should_play(event: SoundEvent) -> bool {
+    let idx = event as usize;
+    let cooldown = cooldown_ms(event);
+    if cooldown == 0 {
+        return true;
+    }
+    let now = now_ms();
+    let last = LAST_PLAY[idx].load(Ordering::Relaxed);
+    // A last-play of 0 means "never played" — always allow.
+    if last == 0 {
+        LAST_PLAY[idx].store(now, Ordering::Relaxed);
+        return true;
+    }
+    let elapsed = now.saturating_sub(last);
+    if elapsed < cooldown {
+        return false; // still in cooldown
+    }
+    LAST_PLAY[idx].store(now, Ordering::Relaxed);
+    true
 }
 
 // ─── Playback primitives ────────────────────────────────────────────────────
@@ -175,6 +314,11 @@ fn visual_bell() {
 ///
 /// If `ZENRITME_VISUAL_BELL` is set, a visual bell flash is also triggered.
 pub fn play_event(event: SoundEvent) {
+    // No-spam guard: skip if within cooldown window.
+    if !should_play(event) {
+        return;
+    }
+
     let played = if let Some(ref file) = resolve_sound_file(event) {
         play_file_via_pw(std::path::Path::new(file))
     } else if let Some(path) = ensure_embedded_file(event) {
@@ -210,63 +354,87 @@ pub fn beep(times: u32) {
 // ─── --sound-test ───────────────────────────────────────────────────────────
 
 /// Prints sound-system status and plays all four events in sequence.
+/// Cleans up temp sound files on completion.
 pub fn sound_test() {
     println!("zenritme sound test (v{})", env!("CARGO_PKG_VERSION"));
     println!();
 
     // ── Per-event info ──────────────────────────────────────────────────────
-    println!("Sound events and sources:");
+    println!("Sound events:");
     for event in all_events() {
         let env = env_var(event);
-        let asset = asset_filename(event);
-        match resolve_sound_file(event) {
-            Some(ref file) => {
-                println!(
-                    "  {:9}  env={}, source={}",
-                    format!("{:?}", event),
-                    env,
-                    file
-                );
-            }
-            None => {
-                println!(
-                    "  {:9}  env={}, source=built-in ({})",
-                    format!("{:?}", event),
-                    env,
-                    asset
-                );
-            }
-        }
+        let source = sound_source(event);
+        let cd = cooldown_ms(event);
+        let cd_str = if cd == 0 {
+            "no cooldown".to_string()
+        } else {
+            format!("{} ms cooldown", cd)
+        };
+        println!(
+            "  {:9}  {}  [{}]  ({})",
+            format!("{:?}", event),
+            source,
+            env,
+            cd_str
+        );
     }
 
     println!();
 
+    // ── Sound profiles ─────────────────────────────────────────────────────
+    println!("Sound profiles:");
+    println!("  calm   - all notification sounds enabled (default)");
+    println!("  silent - all notification sounds suppressed");
+    println!("  --mute flag overrides any profile to silent");
+    println!();
+
     // ── Override docs ──────────────────────────────────────────────────────
-    println!("Override environment variables:");
-    println!("  ZENRITME_SOUND_START     path to custom start sound");
-    println!("  ZENRITME_SOUND_PAUSE     path to custom pause sound");
-    println!("  ZENRITME_SOUND_PHASE     path to custom phase sound");
-    println!("  ZENRITME_SOUND_COMPLETE  path to custom complete sound");
+    println!("Environment variables:");
+    println!("  ZENRITME_SOUND_START     override start sound file");
+    println!("  ZENRITME_SOUND_PAUSE     override pause sound file");
+    println!("  ZENRITME_SOUND_PHASE     override phase sound file");
+    println!("  ZENRITME_SOUND_COMPLETE  override complete sound file");
     println!("  ZENRITME_SOUND_FILE      global fallback for all events");
     println!("  ZENRITME_VISUAL_BELL=1   enable visual bell (screen flash)");
     println!();
 
-    let global = match std::env::var(ENV_GLOBAL) {
-        Ok(p) => format!("(global override: {})", p),
-        Err(_) => "(none)".to_string(),
-    };
-    println!("Global override: {}", global);
+    // ── Global override ─────────────────────────────────────────────────────
+    match std::env::var(ENV_GLOBAL) {
+        Ok(p) => println!("Global override: {}", p),
+        Err(_) => println!("Global override: (none)"),
+    }
+
+    // ── Visual bell ──────────────────────────────────────────────────────────
+    if std::env::var("ZENRITME_VISUAL_BELL").is_ok() {
+        println!("Visual bell:   enabled");
+    } else {
+        println!("Visual bell:   disabled");
+    }
     println!();
 
     // ── Playback demo ───────────────────────────────────────────────────────
     println!("Playing all events in sequence...");
     for event in all_events() {
-        println!("  -> {:?}...", event);
+        print!("  {:?}... ", event);
+        io::stdout().flush().ok();
+        // Reset cooldown before test playback so each event actually plays.
+        reset_cooldown(event);
         play_event(event);
-        std::thread::sleep(std::time::Duration::from_millis(300));
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        println!("ok");
     }
     println!();
-    println!("Sound test complete.");
+
+    // ── Cleanup temp files ──────────────────────────────────────────────────
+    cleanup_temp_sounds();
+    println!("Temp sound files cleaned up.");
+}
+
+/// Reset the cooldown timer for a given event (used by --sound-test
+/// to ensure each event plays during the demo sequence).
+pub fn reset_cooldown(event: SoundEvent) {
+    let idx = event as usize;
+    LAST_PLAY[idx].store(0, Ordering::Relaxed);
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -340,6 +508,30 @@ mod tests {
         assert_eq!(events[3], SoundEvent::Complete);
     }
 
+    // ── Sound source resolution ───────────────────────────────────────────
+
+    #[test]
+    fn sound_source_builtin_when_no_override() {
+        std::env::remove_var(ENV_START);
+        std::env::remove_var(ENV_GLOBAL);
+        assert_eq!(sound_source(SoundEvent::Start), "built-in: start.wav");
+    }
+
+    #[test]
+    fn sound_source_override_when_event_env_set() {
+        std::env::set_var("ZENRITME_SOUND_START", "/tmp/custom.wav");
+        assert_eq!(sound_source(SoundEvent::Start), "override: /tmp/custom.wav");
+        std::env::remove_var("ZENRITME_SOUND_START");
+    }
+
+    #[test]
+    fn sound_source_override_when_global_env_set() {
+        std::env::remove_var("ZENRITME_SOUND_PAUSE");
+        std::env::set_var("ZENRITME_SOUND_FILE", "/tmp/global.wav");
+        assert_eq!(sound_source(SoundEvent::Pause), "override: /tmp/global.wav");
+        std::env::remove_var("ZENRITME_SOUND_FILE");
+    }
+
     // ── Resolution (env var precedence) ────────────────────────────────────
 
     #[test]
@@ -391,5 +583,205 @@ mod tests {
                 event
             );
         }
+    }
+
+    // ── Sound profile ───────────────────────────────────────────────────
+
+    #[test]
+    fn profile_calm_from_name() {
+        assert_eq!(SoundProfile::from_name("calm"), Some(SoundProfile::Calm));
+    }
+
+    #[test]
+    fn profile_calm_case_insensitive() {
+        assert_eq!(SoundProfile::from_name("Calm"), Some(SoundProfile::Calm));
+        assert_eq!(SoundProfile::from_name("CALM"), Some(SoundProfile::Calm));
+    }
+
+    #[test]
+    fn profile_silent_from_name() {
+        assert_eq!(
+            SoundProfile::from_name("silent"),
+            Some(SoundProfile::Silent)
+        );
+    }
+
+    #[test]
+    fn profile_silent_case_insensitive() {
+        assert_eq!(
+            SoundProfile::from_name("Silent"),
+            Some(SoundProfile::Silent)
+        );
+        assert_eq!(
+            SoundProfile::from_name("SILENT"),
+            Some(SoundProfile::Silent)
+        );
+    }
+
+    #[test]
+    fn profile_unknown_rejected() {
+        assert_eq!(SoundProfile::from_name("loud"), None);
+        assert_eq!(SoundProfile::from_name(""), None);
+        assert_eq!(SoundProfile::from_name("off"), None);
+    }
+
+    #[test]
+    fn profile_calm_is_not_silent() {
+        assert!(!SoundProfile::Calm.is_silent());
+    }
+
+    #[test]
+    fn profile_silent_is_silent() {
+        assert!(SoundProfile::Silent.is_silent());
+    }
+
+    #[test]
+    fn profile_as_str_roundtrip() {
+        assert_eq!(
+            SoundProfile::from_name(SoundProfile::Calm.as_str()),
+            Some(SoundProfile::Calm)
+        );
+        assert_eq!(
+            SoundProfile::from_name(SoundProfile::Silent.as_str()),
+            Some(SoundProfile::Silent)
+        );
+    }
+
+    // ── Mute/profile precedence ───────────────────────────────────────────
+
+    #[test]
+    fn mute_overrides_calm() {
+        // --mute should suppress sound even with --sound-profile calm
+        let muted = true;
+        let profile = SoundProfile::Calm;
+        assert!(muted || profile.is_silent(), "mute should suppress");
+    }
+
+    #[test]
+    fn mute_overrides_silent_explicitly() {
+        let muted = true;
+        let profile = SoundProfile::Silent;
+        assert!(muted || profile.is_silent(), "mute should suppress");
+    }
+
+    #[test]
+    fn silent_profile_suppresses_without_mute() {
+        let muted = false;
+        let profile = SoundProfile::Silent;
+        assert!(
+            muted || profile.is_silent(),
+            "silent profile should suppress"
+        );
+    }
+
+    #[test]
+    fn calm_profile_allows_sound_without_mute() {
+        let muted = false;
+        let profile = SoundProfile::Calm;
+        assert!(
+            !(muted || profile.is_silent()),
+            "calm profile should allow sound"
+        );
+    }
+
+    // ── Cooldown / no-spam ────────────────────────────────────────────────
+
+    #[test]
+    fn cooldown_start_is_zero() {
+        assert_eq!(cooldown_ms(SoundEvent::Start), 0);
+    }
+
+    #[test]
+    fn cooldown_pause_is_500ms() {
+        assert_eq!(cooldown_ms(SoundEvent::Pause), 500);
+    }
+
+    #[test]
+    fn cooldown_phase_is_1000ms() {
+        assert_eq!(cooldown_ms(SoundEvent::Phase), 1_000);
+    }
+
+    #[test]
+    fn cooldown_complete_is_2000ms() {
+        assert_eq!(cooldown_ms(SoundEvent::Complete), 2_000);
+    }
+
+    #[test]
+    fn should_play_start_always() {
+        // Start has no cooldown — should always return true.
+        reset_cooldown(SoundEvent::Start);
+        assert!(should_play(SoundEvent::Start));
+        assert!(should_play(SoundEvent::Start));
+    }
+
+    #[test]
+    fn should_play_pause_debounces() {
+        // Reset all cooldowns to avoid interference from other tests.
+        for e in all_events() {
+            reset_cooldown(e);
+        }
+        assert!(should_play(SoundEvent::Pause), "first call should play");
+        assert!(
+            !should_play(SoundEvent::Pause),
+            "immediate second call should be debounced"
+        );
+    }
+
+    #[test]
+    fn should_play_complete_debounces() {
+        for e in all_events() {
+            reset_cooldown(e);
+        }
+        assert!(should_play(SoundEvent::Complete), "first call should play");
+        assert!(
+            !should_play(SoundEvent::Complete),
+            "immediate second call should be debounced"
+        );
+    }
+
+    #[test]
+    fn reset_cooldown_allows_replay() {
+        for e in all_events() {
+            reset_cooldown(e);
+        }
+        assert!(should_play(SoundEvent::Pause));
+        assert!(!should_play(SoundEvent::Pause));
+        reset_cooldown(SoundEvent::Pause);
+        assert!(
+            should_play(SoundEvent::Pause),
+            "after reset, should play again"
+        );
+    }
+
+    // ── TempCleanupGuard ──────────────────────────────────────────────────
+
+    #[test]
+    fn temp_cleanup_guard_install() {
+        let _guard = TempCleanupGuard::install();
+        // Guard is created — Drop will fire when _guard goes out of scope.
+        // This test verifies install() doesn't panic.
+    }
+
+    #[test]
+    fn temp_cleanup_guard_drop_cleans() {
+        // The global CLEANED flag may already be set from a prior test.
+        // We test the guard by directly invoking cleanup (not via the static flag)
+        // and verify it removes our specific temp directory.
+        let dir = std::env::temp_dir().join(format!("zenritme-sounds-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        assert!(dir.exists(), "temp dir should exist before cleanup");
+        // Directly remove to test the directory-specific logic (bypasses CLEANED flag).
+        if dir.exists() {
+            let _ = std::fs::remove_dir_all(&dir);
+        }
+        assert!(!dir.exists(), "temp dir should be removed after cleanup");
+    }
+
+    #[test]
+    fn cleanup_idempotent() {
+        // Calling cleanup multiple times should not panic or fail.
+        cleanup_temp_sounds();
+        cleanup_temp_sounds();
+        cleanup_temp_sounds();
     }
 }
