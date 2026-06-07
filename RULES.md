@@ -100,6 +100,17 @@ Network access in Zenritme is **opt-in and read-only by default**:
 - **No shell interpolation** — URLs and request parameters must be compile-time
   constants; user input must never be interpolated into commands.
 
+## Scripts policy
+
+Scripts under `scripts/` must follow these rules:
+
+- **Strict shell mode** — all scripts use `set -euo pipefail`.
+- **Syntax validation** — scripts must pass `bash -n`.
+- **No network access** — utility and test scripts must not require network.
+- **No root required** — scripts must work without root privileges.
+- **No `sudo` inside scripts** — privilege escalation is the caller's
+  responsibility.
+
 ## Generated assets policy
 
 Assets that are generated programmatically (e.g., sound files, images) must

@@ -80,6 +80,10 @@ ensure terminal safety:
 - **Raw mode** is entered for single-keypress input and fully reversed on
   exit.
 - A `stty sane` fallback is available if the exact state restore fails.
+- **Ctrl+C (SIGINT)** triggers Rust's default unwind path, which drops all
+  locals including `TerminalGuard` and `TempCleanupGuard`, so terminal state
+  and temp files are cleaned up. A `SIGKILL` bypasses all cleanup — this is
+  a limitation of signal-level termination, not a bug.
 
 ## Long-running stability
 

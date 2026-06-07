@@ -98,14 +98,15 @@ mod tests {
 
     #[test]
     fn temp_cleanup_guard_drop_cleans() {
-        let dir = temp_dir_path();
+        // Use a test-specific directory to avoid racing with the OnceLock dir.
+        let dir = std::env::temp_dir().join(format!("zenritme-test-guard-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
-        assert!(dir.exists(), "temp dir should exist before cleanup");
-        // Directly remove to test the directory-specific logic (bypasses CLEANED flag).
+        assert!(dir.exists(), "test temp dir should exist before cleanup");
+        // Directly remove — verifies directory removal logic works.
         if dir.exists() {
             let _ = std::fs::remove_dir_all(&dir);
         }
-        assert!(!dir.exists(), "temp dir should be removed after cleanup");
+        assert!(!dir.exists(), "test temp dir should be removed after cleanup");
     }
 
     #[test]

@@ -117,6 +117,8 @@ jobs:
           cp scripts/install.sh           "${STAGING}/scripts/"
           cp scripts/uninstall.sh         "${STAGING}/scripts/"
           cp scripts/generate-sounds.py   "${STAGING}/scripts/"
+          cp scripts/endurance-smoke.sh   "${STAGING}/scripts/"
+          cp scripts/doctor.sh             "${STAGING}/scripts/"
           cp assets/sounds/*.wav           "${STAGING}/assets/sounds/"
           cp assets/sounds/README.md      "${STAGING}/assets/sounds/"
           cp README.md                    "${STAGING}/"
@@ -176,6 +178,7 @@ jobs:
           - Zero external Rust dependencies
           - LOC guard enforced (all files under 1000 lines)
           - 236 tests, zero warnings
+          - Endurance smoke test and local doctor health check
 
           BODY
           fi

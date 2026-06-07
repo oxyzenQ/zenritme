@@ -66,7 +66,7 @@ Duration format: `30s`, `10m`, `1h`
 
 ```sh
 $ zenritme -V
-Version: v3.0.0
+Version: v4.0.0
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 Rezky_nightky
 License: GPL-3.0-only
@@ -83,8 +83,8 @@ binaries.
 ```sh
 $ zenritme --check-update
 zenritme update check
-Current: v3.0.0
-Latest:  v3.0.0
+Current: v4.0.0
+Latest:  v4.0.0
 Status:  up to date
 Source:  https://github.com/oxyzenq/zenritme/releases/latest
 ```
@@ -118,14 +118,15 @@ Session flow: FOCUS 1/N → SHORT BREAK 1/N → … → FOCUS N/N → LONG BREAK
 | `p` | Pause / resume |
 | `r` | Reset current session |
 
-### Sound system (Ritual Sound — v3.0.0)
+### Sound system
 
-Zenritme v3.0.0 ships a mature ritual sound architecture with four built-in
-procedural notification sounds, embedded directly into the binary at compile
-time. No external audio files or network access are required. The sound system
-is split into focused submodules (assets, playback, resolve, cooldown, cleanup)
-for long-term maintainability. A no-spam cooldown system prevents rapid sound
-toggling from producing audible spam.
+Zenritme ships four built-in procedural notification sounds, embedded
+directly into the binary at compile time. No external audio files or network
+access are required. The sound system is split into focused submodules
+(assets, playback, resolve, cooldown, cleanup) for long-term maintainability.
+A no-spam cooldown system prevents rapid sound toggling from producing
+audible spam. Temp sound files are automatically cleaned up on process
+exit via an RAII guard.
 
 | Event | File | Duration | Description |
 |-------|------|----------|-------------|
@@ -186,7 +187,7 @@ guard. The cleanup is PID-specific and project-specific, ensuring only
 Zenritme's own temp files are removed. Cleanup is idempotent and safe across
 panics, Ctrl+C, and normal exit paths.
 
-**Sound module architecture (v3.0.0):**
+**Sound module architecture:**
 
 | Module | Responsibility |
 |--------|---------------|
@@ -241,9 +242,11 @@ sudo ./scripts/uninstall.sh
 ## Project docs
 
 - [RULES.md](RULES.md) — project rules, LOC guard, generated assets policy
-- [docs/ENDURANCE.md](docs/ENDURANCE.md) — long-running stability testing
+- [docs/ENDURANCE.md](docs/ENDURANCE.md) — endurance testing and smoke test
 - [docs/SECURITY.md](docs/SECURITY.md) — security policy and supply-chain minimization
 - [assets/sounds/README.md](assets/sounds/README.md) — built-in sound documentation
+- [scripts/doctor.sh](scripts/doctor.sh) — local binary health check
+- [scripts/endurance-smoke.sh](scripts/endurance-smoke.sh) — endurance smoke test
 
 ## Principles
 
