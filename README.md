@@ -5,11 +5,7 @@
 <h1 align="center">zenritme</h1>
 
 <p align="center">
-  <strong>A serious terminal timer for focused work, stopwatch tracking, and Pomodoro sessions.</strong>
-</p>
-
-<p align="center">
-  Built for precise timing, keyboard-first operation, clear terminal output, and dependable daily use.
+  <strong>A calm, premium terminal timer, stopwatch, and Pomodoro ritual with built-in procedural sounds.</strong>
 </p>
 
 <p align="center">
@@ -66,7 +62,7 @@ Duration format: `30s`, `10m`, `1h`
 
 ```sh
 $ zenritme -V
-Version: v4.0.0
+Version: v4.0.2
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 rezky_nightky (oxyzenQ)
 License: GPL-3.0-only
@@ -83,8 +79,8 @@ binaries.
 ```sh
 $ zenritme --check-update
 zenritme update check
-Current: v4.0.0
-Latest:  v4.0.0
+Current: v4.0.2
+Latest:  v4.0.2
 Status:  up to date
 Source:  https://github.com/oxyzenQ/zenritme/releases/latest
 ```

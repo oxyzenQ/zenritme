@@ -1,11 +1,21 @@
 [package]
 name = "zenritme"
-version = "4.0.1"
+version = "4.0.2"
 edition = "2021"
 
-description = "Minimal terminal timer, stopwatch, and pomodoro"
+description = "A calm, premium terminal timer, stopwatch, and Pomodoro ritual with built-in procedural sounds."
 authors = ["rezky_nightky (oxyzenQ)"]
 repository = "https://github.com/oxyzenQ/zenritme"
 license = "GPL-3.0-only"
+
+[profile.release]
+opt-level = 3
+debug = false
+strip = true
+lto = "fat"
+codegen-units = 1
+panic = "unwind"
+overflow-checks = false
+incremental = false
 
 [dependencies]
