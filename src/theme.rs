@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //
 // Zenritme
-// Copyright (C) 2026 Rezky Nightky
+// Copyright (C) 2026 rezky_nightky (oxyzenQ)
 
 /// Supported visual themes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

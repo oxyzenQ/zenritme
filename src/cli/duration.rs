@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //
 // Zenritme
-// Copyright (C) 2026 Rezky Nightky
+// Copyright (C) 2026 rezky_nightky (oxyzenQ)
 
 /// Parse a duration string like "30s", "10m", "1h" into a `std::time::Duration`.
 pub(crate) fn parse_duration(s: &str) -> Result<std::time::Duration, String> {

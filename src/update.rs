@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //
 // Zenritme
-// Copyright (C) 2026 Rezky Nightky
+// Copyright (C) 2026 rezky_nightky (oxyzenQ)
 
 //! Safe, read-only update checker.
 //!
@@ -19,7 +19,7 @@
 
 use std::process::Command;
 
-const GITHUB_API_URL: &str = "https://api.github.com/repos/oxyzenq/zenritme/releases/latest";
+const GITHUB_API_URL: &str = "https://api.github.com/repos/oxyzenQ/zenritme/releases/latest";
 const RELEASES_URL: &str = "https://github.com/oxyzenQ/zenritme/releases/latest";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ fn interpret_curl_exit(code: i32) -> &'static str {
 /// Classify an HTTP status code from the GitHub API response.
 fn interpret_http_status(code: u16) -> &'static str {
     match code {
-        404 => "no latest GitHub release found for oxyzenq/zenritme",
+        404 => "no latest GitHub release found for oxyzenQ/zenritme",
         403 => "GitHub API request was rate-limited or forbidden",
         _ => "GitHub API returned an unexpected error",
     }
@@ -551,7 +551,7 @@ mod tests {
     fn http_404() {
         assert_eq!(
             interpret_http_status(404),
-            "no latest GitHub release found for oxyzenq/zenritme"
+            "no latest GitHub release found for oxyzenQ/zenritme"
         );
     }
 
