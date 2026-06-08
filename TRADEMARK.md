@@ -8,7 +8,7 @@ This document governs the use of the **Zenritme** name, logo, and associated bra
 
 ## 1. Trademark Ownership
 
-The name **"Zenritme"** and all associated logos, icons, artwork, and visual identifiers (collectively, the **"Marks"**) are trademarks of the project creator (Rezky Nightky). These Marks are **not** covered by the GPL-3.0 License granted to the source code.
+The name **"Zenritme"** and all associated logos, icons, artwork, and visual identifiers (collectively, the **"Marks"**) are trademarks of the project creator (`rezky_nightky (oxyzenQ)`). These Marks are **not** covered by the GPL-3.0 License granted to the source code.
 
 Use of the Marks is permitted only as described in this policy. All other uses require prior written consent.
 

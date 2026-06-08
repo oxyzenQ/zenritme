@@ -3,7 +3,7 @@
 # ZENRITME BUILD AUTOMATION SCRIPT
 # =============================================================================
 # Optimized build script with intelligent core detection and advanced caching
-# Author: rezky_nightky
+# Author: rezky_nightky (oxyzenQ)
 # =============================================================================
 
 set -euo pipefail

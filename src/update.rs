@@ -20,7 +20,7 @@
 use std::process::Command;
 
 const GITHUB_API_URL: &str = "https://api.github.com/repos/oxyzenq/zenritme/releases/latest";
-const RELEASES_URL: &str = "https://github.com/oxyzenq/zenritme/releases/latest";
+const RELEASES_URL: &str = "https://github.com/oxyzenQ/zenritme/releases/latest";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 

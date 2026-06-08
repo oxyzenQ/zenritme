@@ -8,4 +8,4 @@ Older releases that were published under MIT remain available under their origin
 
 The Zenritme name, logo, visual identity, README branding, screenshots, and release assets are reserved by the author unless explicitly stated otherwise.
 
-Copyright (C) 2026 Rezky Nightky.
+Copyright (C) 2026 rezky_nightky (oxyzenQ).

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //
 // Zenritme
-// Copyright (C) 2026 Rezky Nightky
+// Copyright (C) 2026 rezky_nightky (oxyzenQ)
 
 /// Build and project metadata for the version report.
 pub fn version_report() -> String {
@@ -12,7 +12,7 @@ pub fn version_report() -> String {
     format!(
         "Version: v{ver}\n\
          Build: {target} ({commit})\n\
-         Copyright: (c) 2026 Rezky_nightky\n\
+         Copyright: (c) 2026 rezky_nightky (oxyzenQ)\n\
          License: GPL-3.0-only\n\
          Source: https://github.com/oxyzenQ/zenritme"
     )
@@ -46,7 +46,7 @@ mod tests {
     fn version_report_contains_copyright() {
         let report = version_report();
         assert!(
-            report.contains("Copyright: (c) 2026 Rezky_nightky"),
+            report.contains("Copyright: (c) 2026 rezky_nightky (oxyzenQ)"),
             "missing Copyright line in:\n{report}"
         );
     }

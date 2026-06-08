@@ -68,9 +68,9 @@ Duration format: `30s`, `10m`, `1h`
 $ zenritme -V
 Version: v4.0.0
 Build: linux-x86_64 (1e84ccb)
-Copyright: (c) 2026 Rezky_nightky
+Copyright: (c) 2026 rezky_nightky (oxyzenQ)
 License: GPL-3.0-only
-Source: https://github.com/oxyzenq/zenritme
+Source: https://github.com/oxyzenQ/zenritme
 ```
 
 ### Check for updates
@@ -86,7 +86,7 @@ zenritme update check
 Current: v4.0.0
 Latest:  v4.0.0
 Status:  up to date
-Source:  https://github.com/oxyzenq/zenritme/releases/latest
+Source:  https://github.com/oxyzenQ/zenritme/releases/latest
 ```
 
 Requires `curl` on the system PATH. Does not require a GitHub token.
