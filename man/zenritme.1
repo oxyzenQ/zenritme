@@ -1,0 +1,200 @@
+.\" SPDX-License-Identifier: GPL-3.0-only
+.\"
+.\" Zenritme
+.\" Copyright (C) 2026 rezky_nightky (oxyzenQ)
+.\"
+.Dd June 2026
+.Dt ZENRITME 1
+.Os
+.Sh NAME
+.Nm zenritme
+.Nd calm terminal timer, stopwatch, and Pomodoro ritual
+.Sh SYNOPSIS
+.Nm zenritme
+.Op Fl -timer-up
+.Nm zenritme
+.Fl -timer-down Ar DURATION
+.Nm zenritme
+.Op Fl -stopwatch
+.Nm zenritme
+.Op Fl -pomodoro Op Ar FOCUS BREAK
+.Nm zenritme
+.Fl -sound-test
+.Nm zenritme
+.Fl -check-update
+.Nm zenritme
+.Fl -help | Fl V | Fl -version
+.Sh DESCRIPTION
+.Nm
+is a premium terminal timer, stopwatch, and Pomodoro ritual application
+with built-in procedural notification sounds.
+It uses zero external Rust dependencies and is designed for calm,
+focused terminal workflows.
+.Pp
+Four modes are available: a count-up timer, a count-down timer, a
+stopwatch, and a full Pomodoro ritual with configurable focus/break
+cycles.
+.Pp
+Interactive controls while running:
+.Bl -tag -width "p         " -compact
+.It q / Esc
+Quit the session
+.It p
+Pause or resume
+.It r
+Reset the current session
+.El
+.Sh COMMANDS
+.Bl -tag -width "--timer-down"
+.It Fl -timer-up
+Start a count-up timer that increments indefinitely.
+.It Fl -timer-down Ar DURATION
+Start a count-down timer.
+A duration argument in the format described below is required.
+.It Fl -stopwatch
+Start a stopwatch.
+.It Fl -pomodoro Op Ar FOCUS BREAK
+Start a Pomodoro ritual.
+Optional positional arguments set focus and break durations
+(legacy syntax).
+Session flow:
+FOCUS 1/N -> SHORT BREAK 1/N -> ... -> FOCUS N/N -> LONG BREAK -> COMPLETE.
+.It Fl -sound-test
+Play all four built-in notification sounds and exit.
+.It Fl -check-update , Fl -check-updated
+Query the GitHub releases API and report whether a newer version
+is available.
+This command is read-only and does not download or install anything.
+Requires
+.Xr curl 1
+on the system PATH.
+.It Fl -help , Fl h
+Print usage information and exit.
+.It Fl V , Fl -version
+Print version, build target, copyright, license, and source URL.
+.El
+.Sh OPTIONS
+Options may appear before or after the mode flag.
+.Bl -tag -width "--sound-profile"
+.It Fl -theme Ar THEME
+Color theme.
+One of:
+.Em void , ember , aura , forest , mono .
+Default:
+.Em void .
+.It Fl -view Ar VIEW
+Display view mode.
+One of:
+.Em minimal , orbit , cinematic .
+Default:
+.Em orbit .
+.It Fl -sound-profile Ar PROFILE
+Sound profile.
+One of:
+.Em calm , silent .
+Default:
+.Em calm .
+.It Fl -mute
+Suppress all notification sounds for the session,
+overriding any sound profile.
+.It Fl -focus Ar DURATION
+Pomodoro focus session length.
+Default: 25m.
+.It Fl -break Ar DURATION
+Pomodoro short break length.
+Default: 5m.
+.It Fl -long-break Ar DURATION
+Pomodoro long break length (after final focus cycle).
+Default: 15m.
+.It Fl -cycles Ar N
+Number of focus sessions per Pomodoro round.
+Default: 4.
+.El
+.Sh DURATION FORMAT
+Durations are specified as a number followed by a unit suffix:
+.Bl -tag -width "10m" -compact
+.It 30s
+30 seconds
+.It 10m
+10 minutes
+.It 1h
+1 hour
+.El
+.Sh POMODORO EXAMPLES
+.Bd -literal -offset indent
+zenritme --pomodoro
+zenritme --pomodoro 3s 2s
+zenritme --pomodoro --cycles 4
+zenritme --pomodoro --focus 45m --break 10m --long-break 20m --cycles 3
+zenritme --pomodoro --focus 3s --break 2s --long-break 4s --cycles 2 \\
+    --theme aura --view cinematic
+.Ed
+.Sh SOUND PROFILES
+.Bl -tag -width "calm"
+.It Em calm
+All notification sounds enabled (default).
+.It Em silent
+All notification sounds suppressed.
+.El
+.Pp
+The
+.Fl -mute
+flag overrides any profile to silent.
+Per-event sound file overrides are available via environment variables
+(see
+.Sx ENVIRONMENT
+below).
+.Sh ENVIRONMENT
+.Bl -tag -width "ZENRITME_SOUND_COMPLETE"
+.It Ev ZENRITME_SOUND_START
+Override start sound file path.
+.It Ev ZENRITME_SOUND_PAUSE
+Override pause sound file path.
+.It Ev ZENRITME_SOUND_PHASE
+Override phase switch sound file path.
+.It Ev ZENRITME_SOUND_COMPLETE
+Override completion sound file path.
+.It Ev ZENRITME_SOUND_FILE
+Global fallback sound file for all events.
+.It Ev ZENRITME_VISUAL_BELL
+Set to
+.Em 1
+to enable visual bell (screen flash) on notifications.
+.El
+.Pp
+Resolution order: event-specific env -> global env -> built-in.
+Override paths must be local file paths; no URLs or network fetching.
+.Sh FILES
+Install locations (respects PREFIX and DESTDIR):
+.Pp
+.Bl -tag -width "${PREFIX}/share/man/man1/zenritme.1" -compact
+.It Pa ${PREFIX}/bin/zenritme
+Release binary
+.It Pa ${PREFIX}/share/zenritme/sounds/
+Built-in sound assets
+.It Pa ${PREFIX}/share/man/man1/zenritme.1
+This manpage
+.It Pa ${PREFIX}/share/bash-completion/completions/zenritme
+Bash completions
+.It Pa ${PREFIX}/share/zsh/site-functions/_zenritme
+Zsh completions
+.It Pa ${PREFIX}/share/fish/vendor_completions.d/zenritme.fish
+Fish completions
+.El
+.Sh EXIT BEHAVIOR
+Pressing
+.Em q
+or
+.Em Esc
+exits the session and reliably restores terminal state via RAII guards
+(TerminalGuard, TempCleanupGuard).
+.Pp
+Signal-level termination (SIGINT, SIGKILL) may bypass Rust's Drop
+cleanup, leaving the terminal in raw mode.
+If the terminal appears stuck, press Ctrl+J, type
+.Li stty sane ,
+and press Enter, or open a new terminal window.
+.Sh SOURCE
+https://github.com/oxyzenQ/zenritme
+.Sh LICENSE
+GPL-3.0-only

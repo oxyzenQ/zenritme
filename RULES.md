@@ -81,6 +81,20 @@ Shell scripts under `scripts/` that handle installation must follow these rules:
 - **Syntax validation** — scripts must pass `bash -n` (syntax-only check).
 - **No sudo inside scripts** — scripts must not call `sudo` internally.
   Users elevate privileges when invoking the script if needed.
+- **Manpage and completions** — install/uninstall scripts should handle
+  manpage and shell completion installation/removal as optional, non-fatal
+  steps. Missing source files (manpage, completions) must not cause the
+  script to fail.
+
+## Static distribution files
+
+Shell completion files under `completions/` and the manpage under `man/` are
+static files. They must:
+
+- Be committed directly to the repository (not generated at runtime).
+- Contain no executable logic (plain text configuration only).
+- Require no external tools or network access to install.
+- Be included in the release archive by the release workflow.
 
 ## Network access policy
 

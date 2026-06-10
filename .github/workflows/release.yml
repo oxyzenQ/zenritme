@@ -120,8 +120,17 @@ jobs:
           ARCHIVE_NAME="zenritme-v${VERSION}-x86_64-unknown-linux-gnu"
           STAGING="${ARCHIVE_NAME}"
           mkdir -p "${STAGING}/scripts" \
-            "${STAGING}/docs" "${STAGING}/assets/sounds"
+            "${STAGING}/docs" \
+            "${STAGING}/assets/sounds" \
+            "${STAGING}/completions" \
+            "${STAGING}/man"
           cp target/release/zenritme     "${STAGING}/"
+          cp README.md                    "${STAGING}/"
+          cp LICENSE                      "${STAGING}/"
+          cp NOTICE.md                    "${STAGING}/"
+          cp RULES.md                     "${STAGING}/"
+          cp docs/SECURITY.md             "${STAGING}/docs/"
+          cp docs/ENDURANCE.md            "${STAGING}/docs/"
           cp scripts/install.sh           "${STAGING}/scripts/"
           cp scripts/uninstall.sh         "${STAGING}/scripts/"
           cp scripts/generate-sounds.py   "${STAGING}/scripts/"
@@ -129,12 +138,10 @@ jobs:
           cp scripts/doctor.sh             "${STAGING}/scripts/"
           cp assets/sounds/*.wav           "${STAGING}/assets/sounds/"
           cp assets/sounds/README.md      "${STAGING}/assets/sounds/"
-          cp README.md                    "${STAGING}/"
-          cp LICENSE                      "${STAGING}/"
-          cp NOTICE.md                    "${STAGING}/"
-          cp RULES.md                     "${STAGING}/"
-          cp docs/SECURITY.md             "${STAGING}/docs/"
-          cp docs/ENDURANCE.md            "${STAGING}/docs/"
+          cp completions/zenritme.bash    "${STAGING}/completions/"
+          cp completions/zenritme.zsh     "${STAGING}/completions/"
+          cp completions/zenritme.fish    "${STAGING}/completions/"
+          cp man/zenritme.1               "${STAGING}/man/"
           tar czf "${ARCHIVE_NAME}.tar.gz" "${STAGING}"
           echo "ARCHIVE=${ARCHIVE_NAME}.tar.gz" >> "$GITHUB_ENV"
         shell: bash
@@ -163,14 +170,6 @@ jobs:
           This is a pre-release build for testing.
           See [RULES.md](RULES.md) for project policies.
 
-          ### Changes
-
-          - Sound profiles: \`--sound-profile calm|silent\`
-          - No-spam cooldown: 500 ms pause, 1 s phase, 2 s complete debounce
-          - Automatic temp-file cleanup on exit via RAII guard
-          - Polished \`--sound-test\` with cooldown and profile info
-          - 236 tests, zero warnings
-
           BODY
           else
             cat > release-notes.md << BODY
@@ -184,9 +183,11 @@ jobs:
           - Sound profiles: \`--sound-profile calm|silent\`
           - Automatic temp-file cleanup on process exit
           - Per-event sound overrides and \`--mute\` flag
+          - Static shell completions (bash, zsh, fish)
+          - Manpage (zenritme.1)
+          - Install/uninstall with manpage and completion support
           - Zero external Rust dependencies
           - LOC guard enforced (all files under 1000 lines)
-          - 236 tests, zero warnings
           - Endurance smoke test and local doctor health check
 
           BODY

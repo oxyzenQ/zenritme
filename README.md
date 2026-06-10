@@ -62,7 +62,7 @@ Duration format: `30s`, `10m`, `1h`
 
 ```sh
 $ zenritme -V
-Version: v4.0.2
+Version: v5.0.0
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 rezky_nightky (oxyzenQ)
 License: GPL-3.0-only
@@ -79,8 +79,8 @@ binaries.
 ```sh
 $ zenritme --check-update
 zenritme update check
-Current: v4.0.2
-Latest:  v4.0.2
+Current: v5.0.0
+Latest:  v5.0.0
 Status:  up to date
 Source:  https://github.com/oxyzenQ/zenritme/releases/latest
 ```
@@ -213,8 +213,11 @@ panics, Ctrl+C, and normal exit paths.
 ```sh
 tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
 cd zenritme-vVERSION-x86_64-unknown-linux-gnu
-sudo ./install.sh
+sudo ./scripts/install.sh
 ```
+
+The install script handles the binary, sound assets, manpage, and shell
+completions. It respects `PREFIX` (default `/usr/local`) and `DESTDIR`.
 
 ### From source
 
@@ -235,11 +238,30 @@ PREFIX=/usr ./scripts/install.sh
 sudo ./scripts/uninstall.sh
 ```
 
+### Install locations
+
+| Path | Description |
+|------|-------------|
+| `${PREFIX}/bin/zenritme` | Release binary |
+| `${PREFIX}/share/zenritme/sounds/` | Sound assets |
+| `${PREFIX}/share/man/man1/zenritme.1` | Manpage |
+| `${PREFIX}/share/bash-completion/completions/zenritme` | Bash completions |
+| `${PREFIX}/share/zsh/site-functions/_zenritme` | Zsh completions |
+| `${PREFIX}/share/fish/vendor_completions.d/zenritme.fish` | Fish completions |
+
+### Shell completions and manpage
+
+Static shell completion files for bash, zsh, and fish are included in the
+`completions/` directory. A manpage is provided at `man/zenritme.1`. Both are
+installed automatically by `scripts/install.sh`.
+
 ## Project docs
 
 - [RULES.md](RULES.md) — project rules, LOC guard, generated assets policy
-- [docs/ENDURANCE.md](docs/ENDURANCE.md) — endurance testing and smoke test
 - [docs/SECURITY.md](docs/SECURITY.md) — security policy and supply-chain minimization
+- [docs/ENDURANCE.md](docs/ENDURANCE.md) — endurance testing and smoke test
+- [docs/LONG_USAGE_REPORT.md](docs/LONG_USAGE_REPORT.md) — v4.0.2 long-usage validation
+- [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — pre-release checklist
 - [assets/sounds/README.md](assets/sounds/README.md) — built-in sound documentation
 - [scripts/doctor.sh](scripts/doctor.sh) — local binary health check
 - [scripts/endurance-smoke.sh](scripts/endurance-smoke.sh) — endurance smoke test

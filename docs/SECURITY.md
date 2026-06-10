@@ -122,12 +122,24 @@ If you discover a security issue, please open a GitHub issue with the
 The install and uninstall scripts (`scripts/install.sh`,
 `scripts/uninstall.sh`) are designed with a minimal-trust approach:
 
-- **No network access** — they copy a binary from the local filesystem only.
+- **No network access** — they copy files from the local filesystem only.
 - **No `curl | sh` pattern** — the project does not support or recommend
   remote-script installation.
 - **No `sudo` calls** — privilege escalation is the caller's responsibility.
 - **Strict shell mode** — all scripts use `set -euo pipefail`.
 - **Syntax-validated** — all scripts pass `bash -n`.
+- **Manpage and completions** — install/uninstall handle manpage and shell
+  completion files (bash, zsh, fish) as optional, non-fatal steps. Missing
+  source files are skipped gracefully.
+
+## Static distribution files
+
+Shell completion files (`completions/zenritme.bash`,
+`completions/zenritme.zsh`, `completions/zenritme.fish`) and the manpage
+(`man/zenritme.1`) are static files committed to the repository. They are not
+generated at runtime and contain no executable logic — they are plain text
+configuration for the respective shells and the `man` system. No network
+access or external tooling is required to install them.
 
 See [RULES.md](../RULES.md) for the full install script safety policy.
 

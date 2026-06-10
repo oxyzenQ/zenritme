@@ -2,8 +2,8 @@
 # =============================================================================
 # Zenritme — Local Health Check
 # =============================================================================
-# Runs a lightweight set of checks to verify the binary is healthy.
-# No network, no root, no long-running tests.
+# Runs a lightweight set of checks to verify the binary and distribution
+# files are healthy. No network, no root, no long-running tests.
 #
 # Usage:
 #   ./scripts/doctor.sh
@@ -80,6 +80,28 @@ if [ -f "${PROJECT_ROOT}/scripts/check-loc.sh" ]; then
         FAILED=$((FAILED + 1))
     fi
 fi
+
+# ── Manpage exists ─────────────────────────────────────────────────────────
+
+if [ -f "${PROJECT_ROOT}/man/zenritme.1" ]; then
+    echo "[OK] Manpage: man/zenritme.1"
+else
+    echo "[MISS] Manpage: man/zenritme.1 not found"
+    FAILED=$((FAILED + 1))
+fi
+
+# ── Shell completions exist ─────────────────────────────────────────────────
+
+COMP_OK=1
+for comp_file in completions/zenritme.bash completions/zenritme.zsh completions/zenritme.fish; do
+    if [ -f "${PROJECT_ROOT}/${comp_file}" ]; then
+        echo "[OK] Completion: ${comp_file}"
+    else
+        echo "[MISS] Completion: ${comp_file} not found"
+        COMP_OK=0
+        FAILED=$((FAILED + 1))
+    fi
+done
 
 # ── Temp cleanup ─────────────────────────────────────────────────────────────
 

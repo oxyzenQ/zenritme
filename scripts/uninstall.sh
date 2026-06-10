@@ -2,14 +2,16 @@
 # =============================================================================
 # Zenritme — Uninstall Script
 # =============================================================================
-# Removes the zenritme binary from the system.
+# Removes the zenritme binary, sound assets, manpage, and shell completions
+# from the system.
 #
 # Usage:
-#   ./scripts/uninstall.sh              # remove from /usr/local/bin
-#   PREFIX=/usr ./scripts/uninstall.sh  # remove from /usr/bin
+#   ./scripts/uninstall.sh              # remove from /usr/local
+#   PREFIX=/usr ./scripts/uninstall.sh  # remove from /usr
 #   DESTDIR=/tmp/pkg ./scripts/uninstall.sh  # remove from staged /tmp/pkg
 #
-# This script is safe to run if the file does not exist.
+# This script is safe to run if files do not exist.
+# This script does NOT call sudo internally.
 # =============================================================================
 
 set -euo pipefail
@@ -20,14 +22,55 @@ readonly PROJECT_NAME="zenritme"
 PREFIX="${PREFIX:-/usr/local}"
 DESTDIR="${DESTDIR:-}"
 BINDIR="${DESTDIR}${PREFIX}/bin"
-TARGET="${BINDIR}/${PROJECT_NAME}"
+DATADIR="${DESTDIR}${PREFIX}/share/${PROJECT_NAME}"
+MANDIR="${DESTDIR}${PREFIX}/share/man/man1"
+BASHCOMPDIR="${DESTDIR}${PREFIX}/share/bash-completion/completions"
+ZSHCOMPDIR="${DESTDIR}${PREFIX}/share/zsh/site-functions"
+FISHCOMPDIR="${DESTDIR}${PREFIX}/share/fish/vendor_completions.d"
 
-# --- Uninstall ---------------------------------------------------------------
+# --- Helper: remove file if it exists, print status -------------------------
 
-if [ ! -f "${TARGET}" ]; then
-    echo "${TARGET} does not exist. Nothing to uninstall."
-    exit 0
-fi
+remove_file() {
+    local target="$1"
+    local label="$2"
+    if [ -f "${target}" ]; then
+        rm -f "${target}"
+        echo "Removed ${label}: ${target}"
+    else
+        echo "Not found (skipped): ${label}"
+    fi
+}
 
-rm -f "${TARGET}"
-echo "Removed ${TARGET}"
+# --- Helper: remove directory if it exists -----------------------------------
+
+remove_dir() {
+    local target="$1"
+    local label="$2"
+    if [ -d "${target}" ]; then
+        rm -rf "${target}"
+        echo "Removed ${label}: ${target}"
+    else
+        echo "Not found (skipped): ${label}"
+    fi
+}
+
+# --- Uninstall binary --------------------------------------------------------
+
+remove_file "${BINDIR}/${PROJECT_NAME}" "binary"
+
+# --- Uninstall sound assets --------------------------------------------------
+
+remove_dir "${DATADIR}" "sound assets"
+
+# --- Uninstall manpage -------------------------------------------------------
+
+remove_file "${MANDIR}/zenritme.1" "manpage"
+
+# --- Uninstall shell completions ---------------------------------------------
+
+remove_file "${BASHCOMPDIR}/zenritme" "bash completion"
+remove_file "${ZSHCOMPDIR}/_zenritme" "zsh completion"
+remove_file "${FISHCOMPDIR}/zenritme.fish" "fish completion"
+
+echo ""
+echo "Uninstallation complete."
