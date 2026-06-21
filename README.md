@@ -213,29 +213,29 @@ panics, Ctrl+C, and normal exit paths.
 ```sh
 tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
 cd zenritme-vVERSION-x86_64-unknown-linux-gnu
-sudo ./scripts/install.sh
+./scripts/install.sh
 ```
 
 The install script handles the binary, sound assets, manpage, and shell
-completions. It respects `PREFIX` (default `/usr/local`) and `DESTDIR`.
+completions. It respects `PREFIX` (default `~/.local`) and `DESTDIR`.
 
 ### From source
 
 ```sh
 cargo build --release --locked
-sudo ./scripts/install.sh
+./scripts/install.sh
 ```
 
 Custom prefix:
 
 ```sh
-PREFIX=/usr ./scripts/install.sh
+PREFIX="$HOME/.local" ./scripts/install.sh
 ```
 
 ### Uninstall
 
 ```sh
-sudo ./scripts/uninstall.sh
+./scripts/uninstall.sh
 ```
 
 ### Install locations

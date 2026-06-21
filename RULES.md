@@ -55,7 +55,7 @@ refactoring the architecture. Suggested split domains include:
 ### Enforcement
 
 The script `scripts/check-loc.sh` enforces the LOC guard automatically.
-It is wired into `./build.sh check-all` and runs in CI on every push to `main`.
+It is wired into `./scripts/build.sh check-all` and runs in CI on every push to `main`.
 
 Run it manually at any time:
 

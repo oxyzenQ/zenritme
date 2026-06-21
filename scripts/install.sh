@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (C) 2026 rezky_nightky
+# SPDX-License-Identifier: GPL-3.0-only
 # =============================================================================
 # Zenritme — Install Script
 # =============================================================================
@@ -6,13 +8,13 @@
 # completions to the system.
 #
 # Usage:
-#   ./scripts/install.sh              # install to /usr/local
-#   PREFIX=/usr ./scripts/install.sh  # install to /usr
+#   ./scripts/install.sh              # install to ~/.local
+#   PREFIX=/tmp/zenritme ./scripts/install.sh  # install to a custom prefix
 #   DESTDIR=/tmp/pkg ./scripts/install.sh  # stage into /tmp/pkg
 #
 # Prerequisites:
 #   - target/release/zenritme must exist (build with: cargo build --release --locked)
-#   - write permission to the target directory (may need sudo)
+#   - write permission to the target directory
 #
 # This script does NOT use curl, wget, or any network access.
 # This script does NOT call sudo internally.
@@ -23,7 +25,7 @@ set -euo pipefail
 # --- Configuration (overridable via environment) -----------------------------
 
 readonly PROJECT_NAME="zenritme"
-PREFIX="${PREFIX:-/usr/local}"
+PREFIX="${PREFIX:-${HOME}/.local}"
 DESTDIR="${DESTDIR:-}"
 BINDIR="${DESTDIR}${PREFIX}/bin"
 DATADIR="${DESTDIR}${PREFIX}/share/${PROJECT_NAME}"

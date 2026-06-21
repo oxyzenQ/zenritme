@@ -54,12 +54,39 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build script permissions
-        run: chmod +x ./build.sh
+        run: chmod +x ./scripts/build.sh
 
       - name: Run check-all
-        run: ./build.sh check-all --no-cache
+        run: ./scripts/build.sh check-all --no-cache
         shell: bash
 
       - name: LOC guard
         run: bash scripts/check-loc.sh
         shell: bash
+
+  workflow_quality:
+    name: Workflow lint + codespell
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install workflow lint tools
+        run: |
+          python3 -m pip install --user yamllint codespell
+          go install github.com/rhysd/actionlint/cmd/actionlint@latest
+          echo "${HOME}/go/bin" >> "${GITHUB_PATH}"
+
+      - name: Run actionlint
+        run: actionlint .github/workflows/*.yml
+
+      - name: Run yamllint
+        run: yamllint .github/workflows
+
+      - name: Run codespell
+        run: |
+          if [ -f .codespellrc ]; then
+            codespell --config .codespellrc .
+          else
+            codespell --skip './.git,./target,./assets,./dist,./node_modules' .
+          fi

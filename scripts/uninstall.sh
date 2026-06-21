@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (C) 2026 rezky_nightky
+# SPDX-License-Identifier: GPL-3.0-only
 # =============================================================================
 # Zenritme — Uninstall Script
 # =============================================================================
@@ -6,8 +8,8 @@
 # from the system.
 #
 # Usage:
-#   ./scripts/uninstall.sh              # remove from /usr/local
-#   PREFIX=/usr ./scripts/uninstall.sh  # remove from /usr
+#   ./scripts/uninstall.sh              # remove from ~/.local
+#   PREFIX=/tmp/zenritme ./scripts/uninstall.sh  # remove from a custom prefix
 #   DESTDIR=/tmp/pkg ./scripts/uninstall.sh  # remove from staged /tmp/pkg
 #
 # This script is safe to run if files do not exist.
@@ -19,7 +21,7 @@ set -euo pipefail
 # --- Configuration (overridable via environment) -----------------------------
 
 readonly PROJECT_NAME="zenritme"
-PREFIX="${PREFIX:-/usr/local}"
+PREFIX="${PREFIX:-${HOME}/.local}"
 DESTDIR="${DESTDIR:-}"
 BINDIR="${DESTDIR}${PREFIX}/bin"
 DATADIR="${DESTDIR}${PREFIX}/share/${PROJECT_NAME}"
