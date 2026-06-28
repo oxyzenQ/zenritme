@@ -62,7 +62,7 @@ Duration format: `30s`, `10m`, `1h`
 
 ```sh
 $ zenritme -V
-Version: v5.0.1
+Version: v5.0.2
 Build: linux-x86_64 (1e84ccb)
 Copyright: (c) 2026 rezky_nightky (oxyzenQ)
 License: GPL-3.0-only
@@ -79,8 +79,8 @@ binaries.
 ```sh
 $ zenritme --check-update
 zenritme update check
-Current: v5.0.1
-Latest:  v5.0.1
+Current: v5.0.2
+Latest:  v5.0.2
 Status:  up to date
 Source:  https://github.com/oxyzenQ/zenritme/releases/latest
 ```
