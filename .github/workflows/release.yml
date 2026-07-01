@@ -214,7 +214,7 @@ jobs:
           fi
 
           if [ "${IS_RC}" = "true" ]; then
-            cat > release-notes.md << BODY
+            cat > release-notes.md <<'BODY'
           ## Release Candidate
 
           This is a pre-release build for testing.
@@ -222,7 +222,7 @@ jobs:
 
           BODY
           else
-            cat > release-notes.md << BODY
+            cat > release-notes.md <<'BODY'
           ## v10.0.0 — Peak Performance
 
           - Adaptive tick rate: 6x less CPU on long timers
@@ -240,26 +240,26 @@ jobs:
           fi
 
           # Append common install/uninstall section
-          cat >> release-notes.md << BODY
+          cat >> release-notes.md <<'BODY'
           ## Install
 
-          \`\`\`sh
+          ```sh
           tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
           cd zenritme-vVERSION-x86_64-unknown-linux-gnu
           sudo ./install.sh
-          \`\`\`
+          ```
 
           ## Uninstall
 
-          \`\`\`sh
+          ```sh
           ./uninstall.sh
-          \`\`\`
+          ```
 
           ## Assets
 
-          - \`zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz\`
+          - `zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz`
             — release binary + docs
-          - \`zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz.sha512sum\` — SHA512 checksum
+          - `zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz.sha512sum` — SHA512 checksum
           BODY
           sed -i "s/VERSION/${VERSION}/g" release-notes.md
         shell: bash
