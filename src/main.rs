@@ -76,8 +76,14 @@ fn run(
     let mut session_started = false;
     let muted = mute || profile.is_silent();
 
+    // v10: Dirty tracking — only redraw when displayed content changes.
+    let mut last_displayed_second: Option<u64> = None;
+    let mut last_state = engine.state();
+    let mut last_phase = engine.mode().phase_marker();
+
     loop {
         // ── Process keypresses ────────────────────────────────────────────────
+        let mut input_changed = false;
         if let Some(rx) = rx.as_ref() {
             while let Ok(b) = rx.try_recv() {
                 match b {
@@ -87,13 +93,17 @@ fn run(
                     // Pause / resume (no-op when Completed)
                     b'p' | b'P' => {
                         engine.toggle_pause();
+                        input_changed = true;
                         if !muted {
                             sound::play_event(sound::SoundEvent::Pause);
                         }
                     }
 
                     // Reset current session
-                    b'r' | b'R' => engine.reset(),
+                    b'r' | b'R' => {
+                        engine.reset();
+                        input_changed = true;
+                    }
 
                     // ESC or ESC-sequence
                     27 => match rx.try_recv() {
@@ -120,33 +130,49 @@ fn run(
             }
         }
 
-        let state = render::RenderState {
-            mode: engine.mode(),
-            elapsed: engine.elapsed(),
-            remaining: engine.remaining(),
-            total: match engine.mode() {
-                mode::Mode::TimerDown { total } => Some(total),
-                mode::Mode::Pomodoro {
-                    phase,
-                    focus,
-                    short_break,
-                    long_break,
-                    ..
-                } => Some(match phase {
-                    PomodoroPhase::Focus => focus,
-                    PomodoroPhase::ShortBreak => short_break,
-                    PomodoroPhase::LongBreak => long_break,
-                }),
-                _ => None,
-            },
-            progress: render::compute_progress(&engine),
-            state: engine.state(),
-            frame,
-            colors: &colors,
-            view,
-        };
+        // v10: Dirty tracking — check if we need to redraw.
+        let current_second = engine
+            .remaining()
+            .or_else(|| Some(engine.elapsed()))
+            .map(|d| d.as_secs());
+        let state_changed = engine.state() != last_state;
+        let phase_changed = engine.mode().phase_marker() != last_phase;
+        let second_changed = current_second != last_displayed_second;
+        let need_redraw =
+            input_changed || state_changed || phase_changed || second_changed || frame == 0;
 
-        render::draw(&state);
+        if need_redraw {
+            let state = render::RenderState {
+                mode: engine.mode(),
+                elapsed: engine.elapsed(),
+                remaining: engine.remaining(),
+                total: match engine.mode() {
+                    mode::Mode::TimerDown { total } => Some(total),
+                    mode::Mode::Pomodoro {
+                        phase,
+                        focus,
+                        short_break,
+                        long_break,
+                        ..
+                    } => Some(match phase {
+                        PomodoroPhase::Focus => focus,
+                        PomodoroPhase::ShortBreak => short_break,
+                        PomodoroPhase::LongBreak => long_break,
+                    }),
+                    _ => None,
+                },
+                progress: render::compute_progress(&engine),
+                state: engine.state(),
+                frame,
+                colors: &colors,
+                view,
+            };
+
+            render::draw(&state);
+            last_displayed_second = current_second;
+            last_state = engine.state();
+            last_phase = engine.mode().phase_marker();
+        }
 
         // ── Handle events ─────────────────────────────────────────────────────
         if !muted {
@@ -166,6 +192,21 @@ fn run(
         }
 
         frame += 1;
-        std::thread::sleep(std::time::Duration::from_millis(80));
+
+        // v10: Adaptive tick rate — reduce CPU based on context.
+        // Paused/Completed: 1000ms (near-zero CPU)
+        // Remaining > 60s: 500ms (no need for sub-second precision)
+        // Remaining 10-60s: 200ms (slightly smoother)
+        // Remaining < 10s: 80ms (smooth final countdown)
+        // Stopwatch: 80ms (always smooth)
+        let sleep_ms = match engine.state() {
+            engine::EngineState::Paused | engine::EngineState::Completed => 1000,
+            engine::EngineState::Running => match engine.remaining() {
+                Some(rem) if rem.as_secs() > 60 => 500,
+                Some(rem) if rem.as_secs() >= 10 => 200,
+                _ => 80,
+            },
+        };
+        std::thread::sleep(std::time::Duration::from_millis(sleep_ms));
     }
 }

@@ -4,4 +4,4 @@ version = 4
 
 [[package]]
 name = "zenritme"
-version = "5.0.2"
+version = "10.0.0"
