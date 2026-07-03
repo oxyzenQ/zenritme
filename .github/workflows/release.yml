@@ -206,67 +206,6 @@ jobs:
 
       # ── Release ──────────────────────────────────────────────────────────
 
-      - name: Generate release body
-        run: |
-          IS_RC=false
-          if echo "${VERSION}" | grep -q '-'; then
-            IS_RC=true
-          fi
-
-          if [ "${IS_RC}" = "true" ]; then
-            cat > release-notes.md <<'BODY'
-          ## Release Candidate
-
-          This is a pre-release build for testing.
-          See [RULES.md](RULES.md) for project policies.
-
-          BODY
-          else
-            cat > release-notes.md <<'BODY'
-          ## v10.0.0 — Peak Performance
-
-          - Adaptive tick rate: 6x less CPU on long timers
-          - Dirty render tracking: skip redraw when seconds unchanged
-          - Static musl binary (zero dynamic deps, works on Alpine)
-          - Premium terminal UI with themed rendering
-          - 5 themes: void, ember, aura, forest, mono
-          - 3 view modes: minimal, orbit, cinematic
-          - Ritual sound architecture with no-spam cooldown
-          - Sound profiles: `--sound-profile calm|silent`
-          - Zero external Rust dependencies
-          - 236 tests passing
-
-          BODY
-          fi
-
-          # Append common install/uninstall section
-          cat >> release-notes.md <<'BODY'
-          ## Install
-
-          ```sh
-          tar xzf zenritme-vVERSION-linux-amd64-gnu.tar.gz
-          cd zenritme-vVERSION-linux-amd64-gnu
-          ./scripts/install.sh --system
-          ```
-
-          ## Uninstall
-
-          ```sh
-          ./scripts/uninstall.sh
-          ```
-
-          ## Assets
-
-          - `zenritme-vVERSION-linux-amd64-gnu.tar.gz`
-            — release binary + docs
-          - `zenritme-vVERSION-linux-amd64-gnu.tar.gz.sha512sum` — SHA512 checksum
-          - `zenritme-vVERSION-linux-amd64-musl.tar.gz`
-            — static musl binary + docs (zero dynamic deps)
-          - `zenritme-vVERSION-linux-amd64-musl.tar.gz.sha512sum` — SHA512 checksum
-          BODY
-          sed -i "s/VERSION/${VERSION}/g" release-notes.md
-        shell: bash
-
       - name: Determine prerelease
         id: prerelease
         run: |
@@ -280,10 +219,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Zenritme v${{ env.VERSION }}"
-          body_path: release-notes.md
           draft: false
           prerelease: ${{ steps.prerelease.outputs.prerelease }}
+          generate_release_notes: true
           files: |
             ${{ env.ARCHIVE }}
             ${{ env.ARCHIVE }}.sha512sum
