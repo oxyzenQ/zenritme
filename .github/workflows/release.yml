@@ -118,7 +118,7 @@ jobs:
       - name: Package release archive
         run: |
           set -euo pipefail
-          ARCHIVE_NAME="zenritme-v${VERSION}-x86_64-unknown-linux-gnu"
+          ARCHIVE_NAME="zenritme-v${VERSION}-linux-amd64-gnu"
           STAGING="${ARCHIVE_NAME}"
           mkdir -p "${STAGING}/scripts" \
             "${STAGING}/docs" \
@@ -129,7 +129,7 @@ jobs:
           cp README.md                    "${STAGING}/"
           cp LICENSE                      "${STAGING}/"
           cp NOTICE.md                    "${STAGING}/"
-          cp RULES.md                     "${STAGING}/"
+          cp docs/RULES.md                "${STAGING}/"
           cp docs/SECURITY.md             "${STAGING}/docs/"
           cp docs/ENDURANCE.md            "${STAGING}/docs/"
           cp scripts/install.sh           "${STAGING}/scripts/"
@@ -173,7 +173,7 @@ jobs:
       - name: Package musl archive
         run: |
           set -euo pipefail
-          MUSL_NAME="zenritme-v${VERSION}-x86_64-unknown-linux-musl"
+          MUSL_NAME="zenritme-v${VERSION}-linux-amd64-musl"
           STAGING="${MUSL_NAME}"
           mkdir -p "${STAGING}/scripts" \
             "${STAGING}/docs" \
@@ -185,7 +185,7 @@ jobs:
           cp README.md                    "${STAGING}/"
           cp LICENSE                      "${STAGING}/"
           cp NOTICE.md                    "${STAGING}/"
-          cp RULES.md                     "${STAGING}/"
+          cp docs/RULES.md                "${STAGING}/"
           cp docs/SECURITY.md             "${STAGING}/docs/"
           cp docs/ENDURANCE.md            "${STAGING}/docs/"
           cp scripts/install.sh           "${STAGING}/scripts/"
@@ -244,22 +244,25 @@ jobs:
           ## Install
 
           ```sh
-          tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
-          cd zenritme-vVERSION-x86_64-unknown-linux-gnu
-          sudo ./install.sh
+          tar xzf zenritme-vVERSION-linux-amd64-gnu.tar.gz
+          cd zenritme-vVERSION-linux-amd64-gnu
+          ./scripts/install.sh --system
           ```
 
           ## Uninstall
 
           ```sh
-          ./uninstall.sh
+          ./scripts/uninstall.sh
           ```
 
           ## Assets
 
-          - `zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz`
+          - `zenritme-vVERSION-linux-amd64-gnu.tar.gz`
             — release binary + docs
-          - `zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz.sha512sum` — SHA512 checksum
+          - `zenritme-vVERSION-linux-amd64-gnu.tar.gz.sha512sum` — SHA512 checksum
+          - `zenritme-vVERSION-linux-amd64-musl.tar.gz`
+            — static musl binary + docs (zero dynamic deps)
+          - `zenritme-vVERSION-linux-amd64-musl.tar.gz.sha512sum` — SHA512 checksum
           BODY
           sed -i "s/VERSION/${VERSION}/g" release-notes.md
         shell: bash

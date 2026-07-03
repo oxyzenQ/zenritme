@@ -211,53 +211,48 @@ panics, Ctrl+C, and normal exit paths.
 ### From release tarball
 
 ```sh
-tar xzf zenritme-vVERSION-x86_64-unknown-linux-gnu.tar.gz
-cd zenritme-vVERSION-x86_64-unknown-linux-gnu
-./scripts/install.sh
+tar xzf zenritme-vVERSION-linux-amd64-gnu.tar.gz
+cd zenritme-vVERSION-linux-amd64-gnu
+./scripts/install.sh --system    # installs to /usr/bin/zenritme (sudo for install step)
+# or: ./scripts/install.sh --user  # installs to ~/.local/bin/zenritme (no sudo)
 ```
 
-The install script handles the binary, sound assets, manpage, and shell
-completions. It respects `PREFIX` (default `~/.local`) and `DESTDIR`.
+The install script builds with `cargo build --release --locked` and installs
+the binary. `--system` uses `sudo` only for the install step; `--user` requires
+no sudo at all.
 
 ### From source
 
 ```sh
+git clone https://github.com/oxyzenQ/zenritme
+cd zenritme
 cargo build --release --locked
-./scripts/install.sh
-```
-
-Custom prefix:
-
-```sh
-PREFIX="$HOME/.local" ./scripts/install.sh
+./scripts/install.sh --system   # or --user
 ```
 
 ### Uninstall
 
 ```sh
-./scripts/uninstall.sh
+./scripts/uninstall.sh           # auto-detects /usr/bin, /usr/local/bin, ~/.local/bin
 ```
 
 ### Install locations
 
 | Path | Description |
 |------|-------------|
-| `${PREFIX}/bin/zenritme` | Release binary |
-| `${PREFIX}/share/zenritme/sounds/` | Sound assets |
-| `${PREFIX}/share/man/man1/zenritme.1` | Manpage |
-| `${PREFIX}/share/bash-completion/completions/zenritme` | Bash completions |
-| `${PREFIX}/share/zsh/site-functions/_zenritme` | Zsh completions |
-| `${PREFIX}/share/fish/vendor_completions.d/zenritme.fish` | Fish completions |
+| `/usr/bin/zenritme` | Release binary (`--system`) |
+| `~/.local/bin/zenritme` | Release binary (`--user`, default) |
 
 ### Shell completions and manpage
 
 Static shell completion files for bash, zsh, and fish are included in the
-`completions/` directory. A manpage is provided at `man/zenritme.1`. Both are
-installed automatically by `scripts/install.sh`.
+`completions/` directory. A manpage is provided at `man/zenritme.1`. These
+are reference assets; copy them to the appropriate system paths manually if
+needed.
 
 ## Project docs
 
-- [RULES.md](RULES.md) — project rules, LOC guard, generated assets policy
+- [docs/RULES.md](docs/RULES.md) — project rules, LOC guard, generated assets policy
 - [docs/SECURITY.md](docs/SECURITY.md) — security policy and supply-chain minimization
 - [docs/ENDURANCE.md](docs/ENDURANCE.md) — endurance testing and smoke test
 - [docs/LONG_USAGE_REPORT.md](docs/LONG_USAGE_REPORT.md) — v4.0.2 long-usage validation
@@ -278,6 +273,21 @@ Zenritme is licensed under the **GNU General Public License v3.0 only** (`GPL-3.
 
 You may use, study, modify, and redistribute Zenritme under the terms of the GPLv3. Modified versions that are distributed must preserve the same license terms and provide the corresponding source code.
 
-Older versions that were previously released under the MIT License remain available under their original MIT terms.
+## Intellectual Property & Trademark
 
-The Zenritme name, logo, visual identity, README branding, screenshots, and release assets are reserved by the author unless explicitly stated otherwise.
+**zenritme** is the exclusive intellectual property of
+**rezky_nightky (oxyzenQ)**.
+
+- Source code: licensed under **GPL-3.0-only** (see [LICENSE](LICENSE)).
+- Name, logo, and branding ("the Marks"): governed by
+  [TRADEMARK.md](TRADEMARK.md). The Marks are NOT covered by the GPL and
+  are reserved by the owner.
+- This project is **NOT for sale**. Unauthorized rebranding, relicensing,
+  or source-code theft is strictly prohibited.
+
+For trademark licensing or written permission, contact
+**rezky_nightky (oxyzenQ)** — https://github.com/oxyzenQ.
+
+---
+
+© 2026 rezky_nightky (oxyzenQ). All rights reserved.

@@ -318,7 +318,7 @@ run_loc_check() {
         if bash scripts/check-loc.sh; then
                 log_success "LOC guard passed"
         else
-                log_error "LOC guard failed — see RULES.md"
+                log_error "LOC guard failed — see docs/RULES.md"
                 return 1
         fi
 }

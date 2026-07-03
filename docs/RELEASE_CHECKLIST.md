@@ -48,7 +48,7 @@ Verify the archive (produced by the release workflow or manual `tar`) contains:
 - [ ] `README.md`
 - [ ] `LICENSE`
 - [ ] `NOTICE.md`
-- [ ] `RULES.md`
+- [ ] `docs/RULES.md`
 - [ ] `docs/SECURITY.md`
 - [ ] `docs/ENDURANCE.md`
 - [ ] `scripts/install.sh`

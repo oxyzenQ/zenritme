@@ -35,7 +35,7 @@ This document defines the visual identity and communication standards for the Ze
 
 ### 3.1. Logo file
 
-The official logo is located at [`assets/zenritme-2026.png`](assets/zenritme-2026.png).
+The official logo is located at [`assets/zenritme-new-logo.png`](../assets/zenritme-new-logo.png).
 
 ### 3.2. Usage rules
 

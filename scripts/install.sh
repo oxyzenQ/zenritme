@@ -1,115 +1,73 @@
-#!/bin/bash
-# Copyright (C) 2026 rezky_nightky
+#!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# =============================================================================
-# Zenritme — Install Script
-# =============================================================================
-# Installs a pre-built zenritme binary, sound assets, manpage, and shell
-# completions to the system.
+# Copyright (C) 2026 rezky_nightky (oxyzenQ)
 #
-# Usage:
-#   ./scripts/install.sh              # install to ~/.local
-#   PREFIX=/tmp/zenritme ./scripts/install.sh  # install to a custom prefix
-#   DESTDIR=/tmp/pkg ./scripts/install.sh  # stage into /tmp/pkg
-#
-# Prerequisites:
-#   - target/release/zenritme must exist (build with: cargo build --release --locked)
-#   - write permission to the target directory
-#
-# This script does NOT use curl, wget, or any network access.
-# This script does NOT call sudo internally.
-# =============================================================================
+# Install script for zenritme.
+# Supports --system (system-wide) and --user (default, ~/.local/bin).
+# Run WITHOUT sudo: the script escalates via sudo ONLY for the --system install step.
 
 set -euo pipefail
 
-# --- Configuration (overridable via environment) -----------------------------
+zenritme="zenritme"
+REPO_URL="https://github.com/oxyzenQ/zenritme"
 
-readonly PROJECT_NAME="zenritme"
-PREFIX="${PREFIX:-${HOME}/.local}"
-DESTDIR="${DESTDIR:-}"
-BINDIR="${DESTDIR}${PREFIX}/bin"
-DATADIR="${DESTDIR}${PREFIX}/share/${PROJECT_NAME}"
-MANDIR="${DESTDIR}${PREFIX}/share/man/man1"
-BASHCOMPDIR="${DESTDIR}${PREFIX}/share/bash-completion/completions"
-ZSHCOMPDIR="${DESTDIR}${PREFIX}/share/zsh/site-functions"
-FISHCOMPDIR="${DESTDIR}${PREFIX}/share/fish/vendor_completions.d"
+usage() {
+    cat <<EOF
+Usage: $0 [--system|--user]
 
-# --- Locate project root ----------------------------------------------------
+  --system   Install system-wide to /usr/bin/${zenritme}
+             (script invokes sudo for the install step only)
+  --user     Install to ~/.local/bin/${zenritme}  (default, no sudo)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+The build step (cargo build --release --locked) ALWAYS runs as the current user.
+EOF
+}
 
-# --- Locate binary -----------------------------------------------------------
+MODE="--user"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --system) MODE="--system"; shift ;;
+        --user)   MODE="--user";   shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "error: unknown argument: $1" >&2; usage; exit 2 ;;
+    esac
+done
 
-BINARY="${PROJECT_ROOT}/target/release/${PROJECT_NAME}"
-
-if [ ! -f "${BINARY}" ]; then
-    echo "Error: ${BINARY} not found." >&2
-    echo "Build the release binary first:" >&2
-    echo "  cargo build --release --locked" >&2
+if [[ ! -f Cargo.toml ]]; then
+    echo "error: Cargo.toml not found. Run this script from the repo root." >&2
     exit 1
 fi
 
-# --- Install binary ----------------------------------------------------------
+echo ">> [1/3] Building ${zenritme} (release, locked)"
+cargo build --release --locked
 
-mkdir -p "${BINDIR}"
-cp "${BINARY}" "${BINDIR}/${PROJECT_NAME}"
-chmod 755 "${BINDIR}/${PROJECT_NAME}"
-echo "Installed ${PROJECT_NAME} to ${BINDIR}/${PROJECT_NAME}"
-
-# --- Install sound assets (optional, non-fatal) ------------------------------
-
-SOUND_SRC="${PROJECT_ROOT}/assets/sounds"
-if [ -d "${SOUND_SRC}" ]; then
-    mkdir -p "${DATADIR}/sounds"
-    for wav in "${SOUND_SRC}"/*.wav; do
-        [ -f "$wav" ] || continue
-        cp "$wav" "${DATADIR}/sounds/"
-        echo "  Installed sound: $(basename "$wav")"
-    done
-    echo "Sound assets installed to ${DATADIR}/sounds/"
+BINARY="target/release/${zenritme}"
+if [[ ! -f "${BINARY}" ]]; then
+    echo "error: build produced no binary at ${BINARY}" >&2
+    exit 1
 fi
 
-# --- Install manpage (optional, non-fatal) -----------------------------------
+echo ">> [2/3] Installing ${zenritme} (${MODE})"
 
-MANPAGE_SRC="${PROJECT_ROOT}/man/zenritme.1"
-if [ -f "${MANPAGE_SRC}" ]; then
-    mkdir -p "${MANDIR}"
-    cp "${MANPAGE_SRC}" "${MANDIR}/zenritme.1"
-    chmod 644 "${MANDIR}/zenritme.1"
-    echo "Manpage installed to ${MANDIR}/zenritme.1"
-else
-    echo "Manpage not found (skipped)"
-fi
+case "${MODE}" in
+    --system)
+        # Invoked WITHOUT sudo; escalate only for the install step.
+        sudo install -Dm755 "${BINARY}" "/usr/bin/${zenritme}"
+        echo "   installed: /usr/bin/${zenritme}"
+        ;;
+    --user)
+        user_bin="${HOME}/.local/bin"
+        mkdir -p "${user_bin}"
+        install -Dm755 "${BINARY}" "${user_bin}/${zenritme}"
+        echo "   installed: ${user_bin}/${zenritme}"
+        ;;
+esac
 
-# --- Install shell completions (optional, non-fatal) -------------------------
-
-# Bash
-BASH_COMP_SRC="${PROJECT_ROOT}/completions/zenritme.bash"
-if [ -f "${BASH_COMP_SRC}" ]; then
-    mkdir -p "${BASHCOMPDIR}"
-    cp "${BASH_COMP_SRC}" "${BASHCOMPDIR}/zenritme"
-    chmod 644 "${BASHCOMPDIR}/zenritme"
-    echo "Bash completion installed to ${BASHCOMPDIR}/zenritme"
-fi
-
-# Zsh
-ZSH_COMP_SRC="${PROJECT_ROOT}/completions/zenritme.zsh"
-if [ -f "${ZSH_COMP_SRC}" ]; then
-    mkdir -p "${ZSHCOMPDIR}"
-    cp "${ZSH_COMP_SRC}" "${ZSHCOMPDIR}/_zenritme"
-    chmod 644 "${ZSHCOMPDIR}/_zenritme"
-    echo "Zsh completion installed to ${ZSHCOMPDIR}/_zenritme"
-fi
-
-# Fish
-FISH_COMP_SRC="${PROJECT_ROOT}/completions/zenritme.fish"
-if [ -f "${FISH_COMP_SRC}" ]; then
-    mkdir -p "${FISHCOMPDIR}"
-    cp "${FISH_COMP_SRC}" "${FISHCOMPDIR}/zenritme.fish"
-    chmod 644 "${FISHCOMPDIR}/zenritme.fish"
-    echo "Fish completion installed to ${FISHCOMPDIR}/zenritme.fish"
-fi
-
-echo ""
-echo "Installation complete."
+echo ">> [3/3] Done."
+echo
+echo "Next steps:"
+case "${MODE}" in
+    --system) echo "  - Run: ${zenritme} --help" ;;
+    --user)   echo "  - Ensure ~/.local/bin is on your PATH" ;;
+esac
+echo "  - Docs: ${REPO_URL}#readme"

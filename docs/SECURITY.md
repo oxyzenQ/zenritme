@@ -141,7 +141,7 @@ generated at runtime and contain no executable logic — they are plain text
 configuration for the respective shells and the `man` system. No network
 access or external tooling is required to install them.
 
-See [RULES.md](../RULES.md) for the full install script safety policy.
+See [RULES.md](RULES.md) for the full install script safety policy.
 
 ## Update checker security
 

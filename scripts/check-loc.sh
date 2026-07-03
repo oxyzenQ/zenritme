@@ -83,6 +83,6 @@ if [ "$failed" -eq 0 ]; then
     echo -e "${GREEN}All files pass the ${LIMIT}-line LOC guard.${NC}"
     exit 0
 else
-    echo -e "${RED}One or more files exceed the ${LIMIT}-line limit. See RULES.md.${NC}"
+    echo -e "${RED}One or more files exceed the ${LIMIT}-line limit. See docs/RULES.md.${NC}"
     exit 1
 fi
