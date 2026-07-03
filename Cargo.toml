@@ -1,6 +1,6 @@
 [package]
 name = "zenritme"
-version = "10.0.0"
+version = "10.0.1"
 edition = "2021"
 
 description = "A calm, premium terminal timer, stopwatch, and Pomodoro ritual with built-in procedural sounds."
