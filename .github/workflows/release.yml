@@ -221,7 +221,6 @@ jobs:
         with:
           draft: false
           prerelease: ${{ steps.prerelease.outputs.prerelease }}
-          generate_release_notes: true
           files: |
             ${{ env.ARCHIVE }}
             ${{ env.ARCHIVE }}.sha512sum
