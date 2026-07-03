@@ -63,7 +63,7 @@ Duration format: `30s`, `10m`, `1h`
 ```sh
 $ zenritme -V
 Version: v5.0.2
-Build: linux-x86_64 (1e84ccb)
+Build: linux-amd64 (1e84ccb)
 Copyright: (c) 2026 rezky_nightky (oxyzenQ)
 License: GPL-3.0-only
 Source: https://github.com/oxyzenQ/zenritme
@@ -233,7 +233,7 @@ cargo build --release --locked
 ### Uninstall
 
 ```sh
-./scripts/uninstall.sh           # auto-detects /usr/bin, /usr/local/bin, ~/.local/bin
+./scripts/uninstall.sh           # auto-detects /usr/bin, ~/.local/bin
 ```
 
 ### Install locations

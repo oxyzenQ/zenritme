@@ -16,12 +16,12 @@ usage() {
 Usage: $0 [--system|--user]
 
   --system   Install system-wide:
-               binary       → /usr/local/bin/${PROJECT_NAME}
-               sound assets → /usr/local/share/${PROJECT_NAME}/sounds/
-               manpage      → /usr/local/share/man/man1/${PROJECT_NAME}.1
-               completions  → /usr/local/share/bash-completion/completions/${PROJECT_NAME}
-                              /usr/local/share/zsh/site-functions/_${PROJECT_NAME}
-                              /usr/local/share/fish/vendor_completions.d/${PROJECT_NAME}.fish
+               binary       → /usr/bin/${PROJECT_NAME}
+               sound assets → /usr/share/${PROJECT_NAME}/sounds/
+               manpage      → /usr/share/man/man1/${PROJECT_NAME}.1
+               completions  → /usr/share/bash-completion/completions/${PROJECT_NAME}
+                              /usr/share/zsh/site-functions/_${PROJECT_NAME}
+                              /usr/share/fish/vendor_completions.d/${PROJECT_NAME}.fish
              (script invokes sudo for the install steps)
   --user     Install to user-local (default, no sudo):
                binary       → ~/.local/bin/${PROJECT_NAME}
@@ -63,7 +63,7 @@ fi
 
 # Set install paths + sudo prefix based on mode
 if [[ "${MODE}" == "--system" ]]; then
-    PREFIX="/usr/local"
+    PREFIX="/usr"
     SUDO="sudo"
 else
     PREFIX="${HOME}/.local"

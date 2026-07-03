@@ -4,12 +4,12 @@
 #
 # Uninstall zenritme: binary + sound assets + manpage + shell completions.
 # Auto-detects and removes from all known locations:
-#   binary:       /usr/local/bin/, ~/.local/bin/
-#   sound assets: /usr/local/share/zenritme/, ~/.local/share/zenritme/
-#   manpage:      /usr/local/share/man/man1/zenritme.1, ~/.local/share/man/man1/zenritme.1
-#   completions:  /usr/local/share/bash-completion/completions/zenritme
-#                 /usr/local/share/zsh/site-functions/_zenritme
-#                 /usr/local/share/fish/vendor_completions.d/zenritme.fish
+#   binary:       /usr/bin/, ~/.local/bin/
+#   sound assets: /usr/share/zenritme/, ~/.local/share/zenritme/
+#   manpage:      /usr/share/man/man1/zenritme.1, ~/.local/share/man/man1/zenritme.1
+#   completions:  /usr/share/bash-completion/completions/zenritme
+#                 /usr/share/zsh/site-functions/_zenritme
+#                 /usr/share/fish/vendor_completions.d/zenritme.fish
 #                 (and ~/.local/share/... equivalents)
 # Sudo is used ONLY for system paths. Run WITHOUT sudo.
 
@@ -23,7 +23,7 @@ Usage: $0 [--system|--user|--all]
 
   (default)  Auto-detect: scan all known locations and remove every
              ${PROJECT_NAME} artifact found. Sudo only for system paths.
-  --system   Remove only system paths under /usr/local/.
+  --system   Remove only system paths under /usr/.
   --user     Remove only user paths under ~/.local/. No sudo.
   --all      Same as default.
 
@@ -59,7 +59,7 @@ remove_at() {
 
 echo ">> Uninstalling ${PROJECT_NAME}"
 
-SYSTEM_PREFIX="/usr/local"
+SYSTEM_PREFIX="/usr"
 USER_PREFIX="${HOME}/.local"
 
 case "${MODE}" in
