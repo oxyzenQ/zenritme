@@ -2,22 +2,34 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 rezky_nightky (oxyzenQ)
 #
-# Install script for zenritme.
-# Supports --system (system-wide) and --user (default, ~/.local/bin).
-# Run WITHOUT sudo: the script escalates via sudo ONLY for the --system install step.
+# Install zenritme: binary + sound assets + manpage + shell completions.
+# Supports --system (system-wide) and --user (default, ~/.local).
+# Run WITHOUT sudo: the script escalates via sudo ONLY for --system install steps.
 
 set -euo pipefail
 
-zenritme="zenritme"
-REPO_URL="https://github.com/oxyzenQ/zenritme"
+PROJECT_NAME="zenritme"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
     cat <<EOF
 Usage: $0 [--system|--user]
 
-  --system   Install system-wide to /usr/bin/${zenritme}
-             (script invokes sudo for the install step only)
-  --user     Install to ~/.local/bin/${zenritme}  (default, no sudo)
+  --system   Install system-wide:
+               binary       → /usr/local/bin/${PROJECT_NAME}
+               sound assets → /usr/local/share/${PROJECT_NAME}/sounds/
+               manpage      → /usr/local/share/man/man1/${PROJECT_NAME}.1
+               completions  → /usr/local/share/bash-completion/completions/${PROJECT_NAME}
+                              /usr/local/share/zsh/site-functions/_${PROJECT_NAME}
+                              /usr/local/share/fish/vendor_completions.d/${PROJECT_NAME}.fish
+             (script invokes sudo for the install steps)
+  --user     Install to user-local (default, no sudo):
+               binary       → ~/.local/bin/${PROJECT_NAME}
+               sound assets → ~/.local/share/${PROJECT_NAME}/sounds/
+               manpage      → ~/.local/share/man/man1/${PROJECT_NAME}.1
+               completions  → ~/.local/share/bash-completion/completions/${PROJECT_NAME}
+                              ~/.local/share/zsh/site-functions/_${PROJECT_NAME}
+                              ~/.local/share/fish/vendor_completions.d/${PROJECT_NAME}.fish
 
 The build step (cargo build --release --locked) ALWAYS runs as the current user.
 EOF
@@ -33,41 +45,92 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+cd "${REPO_ROOT}"
+
 if [[ ! -f Cargo.toml ]]; then
-    echo "error: Cargo.toml not found. Run this script from the repo root." >&2
+    echo "error: Cargo.toml not found." >&2
     exit 1
 fi
 
-echo ">> [1/3] Building ${zenritme} (release, locked)"
+echo ">> [1/5] Building ${PROJECT_NAME} (release, locked)"
 cargo build --release --locked
 
-BINARY="target/release/${zenritme}"
+BINARY="target/release/${PROJECT_NAME}"
 if [[ ! -f "${BINARY}" ]]; then
     echo "error: build produced no binary at ${BINARY}" >&2
     exit 1
 fi
 
-echo ">> [2/3] Installing ${zenritme} (${MODE})"
+# Set install paths + sudo prefix based on mode
+if [[ "${MODE}" == "--system" ]]; then
+    PREFIX="/usr/local"
+    SUDO="sudo"
+else
+    PREFIX="${HOME}/.local"
+    SUDO=""
+fi
 
-case "${MODE}" in
-    --system)
-        # Invoked WITHOUT sudo; escalate only for the install step.
-        sudo install -Dm755 "${BINARY}" "/usr/bin/${zenritme}"
-        echo "   installed: /usr/bin/${zenritme}"
-        ;;
-    --user)
-        user_bin="${HOME}/.local/bin"
-        mkdir -p "${user_bin}"
-        install -Dm755 "${BINARY}" "${user_bin}/${zenritme}"
-        echo "   installed: ${user_bin}/${zenritme}"
-        ;;
-esac
+BINDIR="${PREFIX}/bin"
+DATADIR="${PREFIX}/share/${PROJECT_NAME}"
+MANDIR="${PREFIX}/share/man/man1"
+BASHCOMPDIR="${PREFIX}/share/bash-completion/completions"
+ZSHCOMPDIR="${PREFIX}/share/zsh/site-functions"
+FISHCOMPDIR="${PREFIX}/share/fish/vendor_completions.d"
 
-echo ">> [3/3] Done."
+echo ">> [2/5] Installing binary (${MODE})"
+${SUDO} mkdir -p "${BINDIR}"
+${SUDO} install -Dm755 "${BINARY}" "${BINDIR}/${PROJECT_NAME}"
+echo "   installed: ${BINDIR}/${PROJECT_NAME}"
+
+echo ">> [3/5] Installing sound assets (${MODE})"
+SOUND_SRC="${REPO_ROOT}/assets/sounds"
+if [[ -d "${SOUND_SRC}" ]]; then
+    ${SUDO} mkdir -p "${DATADIR}/sounds"
+    for wav in "${SOUND_SRC}"/*.wav; do
+        [[ -f "$wav" ]] || continue
+        ${SUDO} install -Dm644 "$wav" "${DATADIR}/sounds/$(basename "$wav")"
+    done
+    echo "   installed: ${DATADIR}/sounds/"
+else
+    echo "   (no sound assets found, skipped)"
+fi
+
+echo ">> [4/5] Installing manpage (${MODE})"
+MANPAGE_SRC="${REPO_ROOT}/man/${PROJECT_NAME}.1"
+if [[ -f "${MANPAGE_SRC}" ]]; then
+    ${SUDO} install -Dm644 "${MANPAGE_SRC}" "${MANDIR}/${PROJECT_NAME}.1"
+    echo "   installed: ${MANDIR}/${PROJECT_NAME}.1"
+else
+    echo "   (no manpage found, skipped)"
+fi
+
+echo ">> [5/5] Installing shell completions (${MODE})"
+BASH_COMP_SRC="${REPO_ROOT}/completions/${PROJECT_NAME}.bash"
+ZSH_COMP_SRC="${REPO_ROOT}/completions/${PROJECT_NAME}.zsh"
+FISH_COMP_SRC="${REPO_ROOT}/completions/${PROJECT_NAME}.fish"
+
+if [[ -f "${BASH_COMP_SRC}" ]]; then
+    ${SUDO} install -Dm644 "${BASH_COMP_SRC}" "${BASHCOMPDIR}/${PROJECT_NAME}"
+    echo "   bash: ${BASHCOMPDIR}/${PROJECT_NAME}"
+fi
+if [[ -f "${ZSH_COMP_SRC}" ]]; then
+    ${SUDO} install -Dm644 "${ZSH_COMP_SRC}" "${ZSHCOMPDIR}/_${PROJECT_NAME}"
+    echo "   zsh:  ${ZSHCOMPDIR}/_${PROJECT_NAME}"
+fi
+if [[ -f "${FISH_COMP_SRC}" ]]; then
+    ${SUDO} install -Dm644 "${FISH_COMP_SRC}" "${FISHCOMPDIR}/${PROJECT_NAME}.fish"
+    echo "   fish: ${FISHCOMPDIR}/${PROJECT_NAME}.fish"
+fi
+
+echo
+echo ">> Done."
 echo
 echo "Next steps:"
 case "${MODE}" in
-    --system) echo "  - Run: ${zenritme} --help" ;;
-    --user)   echo "  - Ensure ~/.local/bin is on your PATH" ;;
+    --system) echo "  - Verify: ${PROJECT_NAME} --version" ;;
+    --user)
+        echo "  - Ensure ~/.local/bin is on your PATH"
+        echo "  - Verify: ${PROJECT_NAME} --version"
+        ;;
 esac
-echo "  - Docs: ${REPO_URL}#readme"
+echo "  - Uninstall: ./scripts/uninstall.sh"
