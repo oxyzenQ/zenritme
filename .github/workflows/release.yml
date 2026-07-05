@@ -157,10 +157,10 @@ jobs:
           b2sum "${ARCHIVE}" > "${ARCHIVE}.b2sum"
           # SHAKE256 via Python (cross-platform, consistent 64-byte output)
           python3 -c "
-            import hashlib
-            data = open('${ARCHIVE}', 'rb').read()
-            h = hashlib.shake_256(data).hexdigest(64)
-            print(f'{h}  ${ARCHIVE}')
+          import hashlib
+          data = open('${ARCHIVE}', 'rb').read()
+          h = hashlib.shake_256(data).hexdigest(64)
+          print(f'{h}  ${ARCHIVE}')
           " > "${ARCHIVE}.shake256"
           echo "=== Checksums ==="
           cat "${ARCHIVE}.sha512sum"
@@ -218,10 +218,10 @@ jobs:
           b2sum "${MUSL_NAME}.tar.gz" > "${MUSL_NAME}.tar.gz.b2sum"
           # SHAKE256 via Python (cross-platform, consistent 64-byte output)
           python3 -c "
-            import hashlib
-            data = open('${MUSL_NAME}.tar.gz', 'rb').read()
-            h = hashlib.shake_256(data).hexdigest(64)
-            print(f'{h}  ${MUSL_NAME}.tar.gz')
+          import hashlib
+          data = open('${MUSL_NAME}.tar.gz', 'rb').read()
+          h = hashlib.shake_256(data).hexdigest(64)
+          print(f'{h}  ${MUSL_NAME}.tar.gz')
           " > "${MUSL_NAME}.tar.gz.shake256"
           echo "MUSL_ARCHIVE=${MUSL_NAME}.tar.gz" >> "$GITHUB_ENV"
         shell: bash
