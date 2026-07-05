@@ -147,12 +147,18 @@ jobs:
           echo "ARCHIVE=${ARCHIVE_NAME}.tar.gz" >> "$GITHUB_ENV"
         shell: bash
 
-      - name: Generate SHA512 checksum
+      - name: Generate checksums
         run: |
           set -euo pipefail
+          # Checksums: SHA-512 (classical) + BLAKE2b-512 + SHAKE256 (quantum-resistant)
           sha512sum "${ARCHIVE}" > "${ARCHIVE}.sha512sum"
-          echo "Checksum:"
+          b2sum "${ARCHIVE}" > "${ARCHIVE}.b2sum"
+          HASH=$(openssl dgst -shake256 "${ARCHIVE}" | awk -F'= ' '{print $2}')
+          echo "${HASH}  ${ARCHIVE}" > "${ARCHIVE}.shake256"
+          echo "=== Checksums ==="
           cat "${ARCHIVE}.sha512sum"
+          cat "${ARCHIVE}.b2sum"
+          cat "${ARCHIVE}.shake256"
         shell: bash
 
       # ── Musl static binary (v10) ─────────────────────────────────────
@@ -200,7 +206,11 @@ jobs:
           cp completions/zenritme.fish    "${STAGING}/completions/"
           cp man/zenritme.1               "${STAGING}/man/"
           tar czf "${MUSL_NAME}.tar.gz" "${STAGING}"
+          # Checksums: SHA-512 (classical) + BLAKE2b-512 + SHAKE256 (quantum-resistant)
           sha512sum "${MUSL_NAME}.tar.gz" > "${MUSL_NAME}.tar.gz.sha512sum"
+          b2sum "${MUSL_NAME}.tar.gz" > "${MUSL_NAME}.tar.gz.b2sum"
+          HASH=$(openssl dgst -shake256 "${MUSL_NAME}.tar.gz" | awk -F'= ' '{print $2}')
+          echo "${HASH}  ${MUSL_NAME}.tar.gz" > "${MUSL_NAME}.tar.gz.shake256"
           echo "MUSL_ARCHIVE=${MUSL_NAME}.tar.gz" >> "$GITHUB_ENV"
         shell: bash
 
@@ -219,12 +229,17 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          generate_release_notes: true
           draft: false
           prerelease: ${{ steps.prerelease.outputs.prerelease }}
           files: |
             ${{ env.ARCHIVE }}
             ${{ env.ARCHIVE }}.sha512sum
+            ${{ env.ARCHIVE }}.b2sum
+            ${{ env.ARCHIVE }}.shake256
             ${{ env.MUSL_ARCHIVE }}
             ${{ env.MUSL_ARCHIVE }}.sha512sum
+            ${{ env.MUSL_ARCHIVE }}.b2sum
+            ${{ env.MUSL_ARCHIVE }}.shake256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
