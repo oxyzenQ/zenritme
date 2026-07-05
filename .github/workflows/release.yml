@@ -155,8 +155,8 @@ jobs:
           # Checksums: SHA-512 (classical) + BLAKE2b-512 + SHAKE256 (quantum-resistant)
           sha512sum "${ARCHIVE}" > "${ARCHIVE}.sha512sum"
           b2sum "${ARCHIVE}" > "${ARCHIVE}.b2sum"
-          HASH=$(openssl dgst -shake256 "${ARCHIVE}" | awk -F'= ' '{print $2}')
-          echo "${HASH}  ${ARCHIVE}" > "${ARCHIVE}.shake256"
+          # SHAKE256 via Python (cross-platform, consistent 64-byte output)
+          python3 -c "import hashlib; h=hashlib.shake_256(open('${ARCHIVE}','rb').read()).hexdigest(64); print(f'{h}  ${ARCHIVE}')" > "${ARCHIVE}.shake256"
           echo "=== Checksums ==="
           cat "${ARCHIVE}.sha512sum"
           cat "${ARCHIVE}.b2sum"
@@ -211,8 +211,8 @@ jobs:
           # Checksums: SHA-512 (classical) + BLAKE2b-512 + SHAKE256 (quantum-resistant)
           sha512sum "${MUSL_NAME}.tar.gz" > "${MUSL_NAME}.tar.gz.sha512sum"
           b2sum "${MUSL_NAME}.tar.gz" > "${MUSL_NAME}.tar.gz.b2sum"
-          HASH=$(openssl dgst -shake256 "${MUSL_NAME}.tar.gz" | awk -F'= ' '{print $2}')
-          echo "${HASH}  ${MUSL_NAME}.tar.gz" > "${MUSL_NAME}.tar.gz.shake256"
+          # SHAKE256 via Python (cross-platform, consistent 64-byte output)
+          python3 -c "import hashlib; h=hashlib.shake_256(open('${MUSL_NAME}.tar.gz','rb').read()).hexdigest(64); print(f'{h}  ${MUSL_NAME}.tar.gz')" > "${MUSL_NAME}.tar.gz.shake256"
           echo "MUSL_ARCHIVE=${MUSL_NAME}.tar.gz" >> "$GITHUB_ENV"
         shell: bash
 
