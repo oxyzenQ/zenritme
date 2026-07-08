@@ -32,12 +32,15 @@ pub(crate) fn terminal_bell() {
 }
 
 /// Triggers a visual bell (brief screen flash via DEC private mode).
-/// The screen flashes on for 60 ms, then restores normal mode.
+/// Spawns a background thread so the 60 ms sleep does not block the main loop.
 pub(crate) fn visual_bell() {
-    let mut stdout = io::stdout();
-    let _ = stdout.write_all(b"\x1b[?5h");
-    let _ = stdout.flush();
-    std::thread::sleep(std::time::Duration::from_millis(60));
-    let _ = stdout.write_all(b"\x1b[?5l");
-    let _ = stdout.flush();
+    // Capture stdout handle in the spawned thread to avoid blocking.
+    std::thread::spawn(|| {
+        let mut stdout = io::stdout();
+        let _ = stdout.write_all(b"\x1b[?5h");
+        let _ = stdout.flush();
+        std::thread::sleep(std::time::Duration::from_millis(60));
+        let _ = stdout.write_all(b"\x1b[?5l");
+        let _ = stdout.flush();
+    });
 }

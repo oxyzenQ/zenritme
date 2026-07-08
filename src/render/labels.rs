@@ -18,19 +18,15 @@ pub(crate) fn build_title(state: &super::RenderState) -> String {
         Mode::TimerUp => "TIMER UP".to_string(),
         Mode::TimerDown { .. } => "TIMER DOWN".to_string(),
         Mode::Stopwatch => "STOPWATCH".to_string(),
-        Mode::Pomodoro {
-            phase,
-            cycles,
-            current_cycle,
-            emoji,
-            ..
-        } => {
+        Mode::Pomodoro { cycles, emoji, .. } => {
+            let phase = state.engine_phase;
+            let cycle = state.engine_cycle;
             let base = match state.state {
                 EngineState::Completed => "COMPLETE".to_string(),
                 _ => match phase {
-                    PomodoroPhase::Focus => format!("FOCUS {}/{}", current_cycle, cycles),
+                    PomodoroPhase::Focus => format!("FOCUS {}/{}", cycle, cycles),
                     PomodoroPhase::ShortBreak => {
-                        format!("SHORT BREAK {}/{}", current_cycle, cycles)
+                        format!("SHORT BREAK {}/{}", cycle, cycles)
                     }
                     PomodoroPhase::LongBreak => "LONG BREAK".to_string(),
                 },

@@ -64,8 +64,12 @@ pub fn cleanup_temp_sounds() {
 
 /// RAII guard that registers a cleanup handler on drop.
 /// Created via `TempCleanupGuard::install()` at the start of `main()`.
-/// On any exit path (normal return, `std::process::exit`, panic unwind),
-/// the guard's `Drop` impl calls `cleanup_temp_sounds()`.
+/// On normal return and panic unwind, the guard's `Drop` impl calls
+/// `cleanup_temp_sounds()`.
+///
+/// **Caveat:** `std::process::exit()` and signal termination (SIGKILL,
+/// SIGINT without handler) do NOT run destructors — temp files may
+/// remain in those cases. See `docs/ENDURANCE.md` for details.
 pub struct TempCleanupGuard;
 
 impl TempCleanupGuard {

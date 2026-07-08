@@ -79,7 +79,7 @@ fn run(
     // v10: Dirty tracking — only redraw when displayed content changes.
     let mut last_displayed_second: Option<u64> = None;
     let mut last_state = engine.state();
-    let mut last_phase = engine.mode().phase_marker();
+    let mut last_phase = engine.phase_marker();
 
     loop {
         // ── Process keypresses ────────────────────────────────────────────────
@@ -136,7 +136,7 @@ fn run(
             .or_else(|| Some(engine.elapsed()))
             .map(|d| d.as_secs());
         let state_changed = engine.state() != last_state;
-        let phase_changed = engine.mode().phase_marker() != last_phase;
+        let phase_changed = engine.phase_marker() != last_phase;
         let second_changed = current_second != last_displayed_second;
         let need_redraw =
             input_changed || state_changed || phase_changed || second_changed || frame == 0;
@@ -149,12 +149,11 @@ fn run(
                 total: match engine.mode() {
                     mode::Mode::TimerDown { total } => Some(total),
                     mode::Mode::Pomodoro {
-                        phase,
                         focus,
                         short_break,
                         long_break,
                         ..
-                    } => Some(match phase {
+                    } => Some(match engine.pomo_phase() {
                         PomodoroPhase::Focus => focus,
                         PomodoroPhase::ShortBreak => short_break,
                         PomodoroPhase::LongBreak => long_break,
@@ -166,12 +165,14 @@ fn run(
                 frame,
                 colors: &colors,
                 view,
+                engine_phase: engine.pomo_phase(),
+                engine_cycle: engine.pomo_cycle(),
             };
 
             render::draw(&state);
             last_displayed_second = current_second;
             last_state = engine.state();
-            last_phase = engine.mode().phase_marker();
+            last_phase = engine.phase_marker();
         }
 
         // ── Handle events ─────────────────────────────────────────────────────

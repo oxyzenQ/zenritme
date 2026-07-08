@@ -21,13 +21,12 @@ pub(crate) fn compute_progress(engine: &crate::engine::Engine) -> Option<f32> {
             }
         }
         Mode::Pomodoro {
-            phase,
             focus,
             short_break,
             long_break,
             ..
         } => {
-            let phase_total = match phase {
+            let phase_total = match engine.pomo_phase() {
                 PomodoroPhase::Focus => focus,
                 PomodoroPhase::ShortBreak => short_break,
                 PomodoroPhase::LongBreak => long_break,

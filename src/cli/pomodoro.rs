@@ -3,7 +3,7 @@
 // Zenritme
 // Copyright (C) 2026 rezky_nightky (oxyzenQ)
 
-use crate::mode::{Mode, PomodoroPhase};
+use crate::mode::Mode;
 use crate::render::ViewMode;
 use crate::theme::Theme;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -124,12 +124,10 @@ where
 
     Ok(super::Command::Run {
         mode: Mode::Pomodoro {
-            phase: PomodoroPhase::Focus,
             focus,
             short_break,
             long_break,
             cycles,
-            current_cycle: 1,
             emoji: pick_pomodoro_emoji(),
         },
         theme,

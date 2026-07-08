@@ -49,6 +49,10 @@ pub struct RenderState<'a> {
     pub frame: u64,
     pub colors: &'a ColorFields,
     pub view: ViewMode,
+    /// Current Pomodoro phase from Engine (only meaningful for Pomodoro mode).
+    pub engine_phase: crate::mode::PomodoroPhase,
+    /// Current Pomodoro cycle from Engine (only meaningful for Pomodoro mode).
+    pub engine_cycle: u32,
 }
 
 // ─── Shared utility ──────────────────────────────────────────────────────────

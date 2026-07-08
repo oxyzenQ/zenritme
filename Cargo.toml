@@ -15,7 +15,7 @@ strip = true
 lto = "thin"
 codegen-units = 1
 panic = "unwind"
-overflow-checks = false
+overflow-checks = true
 incremental = false
 
 [dependencies]
