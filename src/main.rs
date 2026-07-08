@@ -58,9 +58,17 @@ fn main() {
             mute,
             profile,
         } => {
-            run(mode, theme, view, mute, profile);
+            let code = run(mode, theme, view, mute, profile);
+            std::process::exit(code);
         }
     }
+}
+
+/// Exit control for the main loop.
+/// `Break` exits the loop cleanly (allowing `TerminalGuard` to drop).
+enum LoopAction {
+    Continue,
+    Break,
 }
 
 fn run(
@@ -69,7 +77,11 @@ fn run(
     view: render::ViewMode,
     mute: bool,
     profile: sound::SoundProfile,
-) {
+) -> i32 {
+    // _term MUST stay alive for the entire duration of this function.
+    // When `run` returns, _term is dropped → TerminalGuard::drop() restores
+    // the terminal (leaves alt screen, shows cursor, restores stty).
+    // This is why we NEVER call `std::process::exit` inside the loop.
     let (_term, rx) = terminal::spawn_input();
     let mut engine = engine::Engine::new(mode);
     let colors = theme.colors();
@@ -84,7 +96,11 @@ fn run(
     let mut completed_at: Option<Instant> = None;
 
     loop {
-        let input_changed = process_keypresses(rx.as_ref(), &mut engine, muted);
+        let input_action = process_keypresses(rx.as_ref(), &mut engine, muted);
+        if matches!(input_action, LoopAction::Break) {
+            break;
+        }
+        let input_changed = true;
 
         // ── Advance engine ────────────────────────────────────────────────────
         engine.tick();
@@ -133,7 +149,7 @@ fn run(
             match completed_at {
                 None => completed_at = Some(Instant::now()),
                 Some(t) if t.elapsed() >= Duration::from_secs(5) => {
-                    std::process::exit(0);
+                    break;
                 }
                 Some(_) => {}
             }
@@ -155,23 +171,22 @@ fn run(
         };
         std::thread::sleep(sleep);
     }
+    0
 }
 
-/// Process pending keypresses. Returns `true` if any input was handled.
+/// Process pending keypresses. Returns the loop action (continue or break).
 fn process_keypresses(
     rx: Option<&mpsc::Receiver<u8>>,
     engine: &mut engine::Engine,
     muted: bool,
-) -> bool {
-    let mut changed = false;
+) -> LoopAction {
     if let Some(rx) = rx {
         while let Ok(b) = rx.try_recv() {
             match b {
-                b'q' | b'Q' | 3 => std::process::exit(0),
+                b'q' | b'Q' | 3 => return LoopAction::Break,
 
                 b'p' | b'P' => {
                     engine.toggle_pause();
-                    changed = true;
                     if !muted {
                         sound::play_event(sound::SoundEvent::Pause);
                     }
@@ -179,7 +194,6 @@ fn process_keypresses(
 
                 b'r' | b'R' => {
                     engine.reset();
-                    changed = true;
                 }
 
                 // ESC — debounce: wait briefly for ESC [ / ESC O sequences
@@ -192,7 +206,7 @@ fn process_keypresses(
                         }
                         Ok(_) | Err(_) => {
                             // Bare ESC (timeout) or unknown sequence — quit.
-                            std::process::exit(0);
+                            return LoopAction::Break;
                         }
                     }
                 }
@@ -201,7 +215,7 @@ fn process_keypresses(
             }
         }
     }
-    changed
+    LoopAction::Continue
 }
 
 /// Build a `RenderState` snapshot from the current engine state.
