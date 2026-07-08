@@ -143,14 +143,17 @@ pub fn spawn_input() -> (TerminalGuard, Option<mpsc::Receiver<u8>>) {
     };
 
     let (tx, rx) = mpsc::channel();
-    std::thread::spawn(move || {
-        let mut buf = [0u8; 1];
-        while let Ok(()) = tty.read_exact(&mut buf) {
-            if tx.send(buf[0]).is_err() {
-                break;
+    std::thread::Builder::new()
+        .name("zenritme-input".to_string())
+        .spawn(move || {
+            let mut buf = [0u8; 1];
+            while let Ok(()) = tty.read_exact(&mut buf) {
+                if tx.send(buf[0]).is_err() {
+                    break;
+                }
             }
-        }
-    });
+        })
+        .ok(); // thread handle intentionally dropped — runs until channel disconnects
 
     (guard, Some(rx))
 }

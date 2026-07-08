@@ -41,13 +41,22 @@ impl Theme {
     }
 
     /// Resolve to a concrete color palette, respecting NO_COLOR.
+    ///
+    /// `NO_COLOR` is checked once per call (the env var is read-only at
+    /// runtime in practice). The caller in `main()` stores the result,
+    /// so this runs at most once per session.
     pub fn colors(&self) -> ColorFields {
-        let no_color = std::env::var("NO_COLOR").is_ok();
-        if no_color {
+        if no_color_active() {
             return ColorFields::plain();
         }
         self.palette()
     }
+}
+
+/// Check the [NO_COLOR](https://no-color.org/) environment variable.
+/// Returns `true` if the variable is set (to any value, including empty).
+fn no_color_active() -> bool {
+    std::env::var("NO_COLOR").is_ok()
 }
 
 /// ANSI color codes for each UI element.

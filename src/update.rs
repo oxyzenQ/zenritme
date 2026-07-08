@@ -156,42 +156,64 @@ pub fn compare_versions(current: &str, latest: &str) -> UpdateInfo {
 /// This is a minimal, safe parser that scans for the literal key `"tag_name"`
 /// followed by a colon and a quoted string value. It does not deserialize the
 /// full JSON — just plucks out the one field we need.
+///
+/// To avoid matching `"tag_name"` inside a string value, we verify that the
+/// byte immediately preceding the match is a valid JSON structural character
+/// (`:`, `,`, `{`, `[`, or whitespace).
 pub fn extract_tag_name(json: &str) -> Option<String> {
-    // Find "tag_name" followed by colon.
     let key = "\"tag_name\"";
-    let pos = json.find(key)?;
-    let rest = &json[pos + key.len()..];
+    let mut search_from = 0;
 
-    // Skip whitespace and colon.
-    let rest = rest.trim_start();
-    let rest = rest.strip_prefix(':')?;
-    let rest = rest.trim_start();
+    while let Some(pos) = json[search_from..].find(key) {
+        let abs_pos = search_from + pos;
 
-    // Expect opening quote.
-    let rest = rest.strip_prefix('"')?;
-
-    // Read until closing quote (handle simple escapes).
-    let mut value = String::new();
-    let mut chars = rest.chars();
-    loop {
-        match chars.next()? {
-            '"' => break,
-            '\\' => match chars.next()? {
-                '"' => value.push('"'),
-                '\\' => value.push('\\'),
-                'n' => value.push('\n'),
-                't' => value.push('\t'),
-                '/' => value.push('/'),
-                c => {
-                    value.push('\\');
-                    value.push(c);
-                }
-            },
-            c => value.push(c),
+        // Verify the preceding character is a valid JSON structural context:
+        // ':', ',', '{', '[', whitespace, or start-of-string.
+        let valid_prefix = abs_pos == 0
+            || matches!(
+                json.as_bytes()[abs_pos - 1],
+                b':' | b',' | b'{' | b'[' | b' ' | b'\t' | b'\n' | b'\r'
+            );
+        if !valid_prefix {
+            search_from = abs_pos + key.len();
+            continue;
         }
+
+        let rest = &json[abs_pos + key.len()..];
+
+        // Skip whitespace and colon.
+        let rest = rest.trim_start();
+        let rest = rest.strip_prefix(':')?;
+        let rest = rest.trim_start();
+
+        // Expect opening quote.
+        let rest = rest.strip_prefix('"')?;
+
+        // Read until closing quote (handle simple escapes).
+        let mut value = String::new();
+        let mut chars = rest.chars();
+        loop {
+            match chars.next()? {
+                '"' => break,
+                '\\' => match chars.next()? {
+                    '"' => value.push('"'),
+                    '\\' => value.push('\\'),
+                    'n' => value.push('\n'),
+                    't' => value.push('\t'),
+                    '/' => value.push('/'),
+                    c => {
+                        value.push('\\');
+                        value.push(c);
+                    }
+                },
+                c => value.push(c),
+            }
+        }
+
+        return Some(value);
     }
 
-    Some(value)
+    None
 }
 
 // ─── Version normalization ────────────────────────────────────────────────────

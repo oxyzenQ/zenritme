@@ -63,16 +63,23 @@ fn terminal_size_linux_ioctl() -> Option<(usize, usize)> {
 
 // ─── Display-width helpers ──────────────────────────────────────────────────
 
-/// Compute the terminal display width of a string, ignoring ANSI escape sequences.
+/// Returns `true` for bytes that are valid CSI final characters
+/// (standardized range: 0x40–0x7E).
+#[inline]
+fn is_csi_final(b: u8) -> bool {
+    (0x40..=0x7E).contains(&b)
+}
+
+/// Compute the terminal display width of a string, ignoring ANSI CSI escape sequences.
 pub(crate) fn display_width(s: &str) -> usize {
     let mut width = 0;
     let mut chars = s.chars().peekable();
     while let Some(ch) = chars.next() {
-        // Skip CSI sequences: ESC [ ... m
+        // Skip CSI sequences: ESC [ (params) (intermediates) FINAL_BYTE
         if ch == '\x1b' && chars.peek() == Some(&'[') {
-            chars.next();
+            chars.next(); // consume '['
             for c in chars.by_ref() {
-                if c == 'm' {
+                if c.is_ascii() && is_csi_final(c as u8) {
                     break;
                 }
             }
@@ -129,7 +136,7 @@ pub(crate) fn strip_ansi(s: &str) -> String {
         if ch == '\x1b' && chars.peek() == Some(&'[') {
             chars.next();
             for c in chars.by_ref() {
-                if c == 'm' {
+                if c.is_ascii() && is_csi_final(c as u8) {
                     break;
                 }
             }
