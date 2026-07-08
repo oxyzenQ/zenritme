@@ -288,26 +288,24 @@ needed.
 
 Zenritme never reads sensitive system files. All user-provided filesystem
 paths (currently the `ZENRITME_SOUND_*` environment variables) are validated
-through a strict allowlist + denylist policy before use.
+through a **whitelist-only** policy: if a path is not inside one of the
+explicit allowed roots below, it is denied. No denylist to maintain —
+deny-by-default is future-proof.
 
-**Allowed roots** (recursive):
+**Allowed roots** (cross-platform, recursive):
 
-- Home directory (`~`)
-- Current working directory (`.`)
-- `~/.config/zenritme/`
-- `~/.local/share/zenritme/`
+| Platform | Allowed roots |
+|----------|---------------|
+| Linux / macOS | `~/.config/zenritme/`, `.`, `/etc/zenritme/`, system temp dir |
+| Windows | `%APPDATA%\zenritme\`, `.`, `%TEMP%\` |
 
-**Denied locations** (always rejected, even inside an allowed root):
+Everything else is rejected: `~/.ssh/`, `~/.aws/`, `/etc/shadow`, `~/Documents/`,
+`/usr/share/sounds/`, `/home/user/file.txt` — all denied by default because they
+are not in the whitelist.
 
-- `~/.ssh/`, `~/.gnupg/`, `~/.aws/`, `~/.docker/`, `~/.kube/`
-- `~/.config/systemd/`, `~/.local/share/keyrings/`
-- `/etc/shadow`, `/etc/gshadow`, `/etc/ssh/`
-- `/proc/`, `/sys/`, `/root/` (unless running as root)
-
-Symlinks are resolved via `canonicalize()` before the policy check, so a
-symlink inside an allowed root that points to a denied location is rejected.
-Paths that fail validation trigger a stderr warning and fall back to the
-built-in embedded sound.
+Symlinks are resolved via `canonicalize()` before the whitelist check, so a
+symlink inside an allowed root that points outside is rejected. Paths that fail
+validation trigger a stderr warning and fall back to the built-in embedded sound.
 
 ## License
 

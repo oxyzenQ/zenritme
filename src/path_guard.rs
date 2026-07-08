@@ -3,37 +3,31 @@
 // Zenritme
 // Copyright (C) 2026 rezky_nightky (oxyzenQ)
 
-//! Path security guard — strict allowlist + denylist for user-provided paths.
+//! Path security guard — strict whitelist for user-provided paths.
 //!
 //! Zenritme must NEVER read sensitive system files (`/etc/shadow`, `~/.ssh/`,
-//! `/proc/`, etc.).  All user-provided filesystem paths (currently: the
-//! `ZENRITME_SOUND_*` env vars) are validated through this module before
-//! being opened or passed to playback subprocesses.
+//! `/proc/`, etc.).  Rather than maintain a blacklist of dangerous paths
+//! (whack-a-mole, grows forever, easy to miss new vectors), we use a
+//! **whitelist-only** approach: if a path is not inside one of the explicit
+//! allowed roots, it is denied.  No exceptions, no denylist to maintain.
 //!
-//! # Policy
+//! # Allowed roots (cross-platform)
 //!
-//! ## Allowed roots (recursive)
+//! | Platform | Allowed roots |
+//! |----------|---------------|
+//! | Linux / macOS | `~/.config/zenritme/`, `.`, `/etc/zenritme/`, system temp dir |
+//! | Windows | `%APPDATA%\zenritme\`, `.`, `%TEMP%\` |
 //!
-//! 1. **Home directory** — `~` (recursive)
-//! 2. **Current working directory** — `.` (recursive)
-//! 3. **Project config dir** — `~/.config/zenritme/` (recursive)
-//! 4. **Project data dir** — `~/.local/share/zenritme/` (recursive)
+//! Everything else is denied: `~/.ssh/`, `~/.aws/`, `/etc/shadow`,
+//! `~/Documents/`, `/usr/share/sounds/`, `/home/user/file.txt` — all rejected
+//! by default because they are not in the whitelist.
 //!
-//! ## Denied subpaths (always rejected, even inside an allowed root)
+//! # Symlink safety
 //!
-//! - `~/.ssh/`, `~/.gnupg/`, `~/.aws/`, `~/.docker/`, `~/.kube/`
-//! - `~/.config/systemd/`, `~/.local/share/keyrings/`
-//! - `/etc/shadow`, `/etc/gshadow`, `/etc/shadow-`, `/etc/gshadow-`
-//! - `/etc/ssh/`
-//! - `/root/` (unless running as UID 0)
-//! - `/proc/`, `/sys/`
-//!
-//! ## Symlink safety
-//!
-//! Paths are canonicalized (symlinks resolved) before the policy check, so a
-//! symlink inside an allowed root that points to a denied location is rejected.
-//! For non-existent paths (e.g. a sound file the user will create later), the
-//! **parent directory** is canonicalized and the policy is applied to it.
+//! Paths are canonicalized (symlinks resolved) before the whitelist check, so
+//! a symlink inside an allowed root that points outside is rejected.  For
+//! non-existent paths (e.g. a sound file the user will create later), the
+//! **parent directory** is canonicalized and the check is applied to it.
 
 use std::path::{Path, PathBuf};
 
@@ -44,10 +38,8 @@ use std::path::{Path, PathBuf};
 pub enum PathError {
     /// The input was empty or whitespace-only.
     Empty,
-    /// The path resolves to a denied/sensitive location (e.g. `~/.ssh/`).
-    Denied(String),
-    /// The path is outside all allowed roots.
-    OutsideAllowed(String),
+    /// The path is outside all whitelisted roots.
+    OutsideWhitelist(String),
     /// The path or its parent could not be resolved on the filesystem.
     ResolutionFailed(String),
 }
@@ -56,11 +48,8 @@ impl std::fmt::Display for PathError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PathError::Empty => write!(f, "empty path"),
-            PathError::Denied(p) => {
-                write!(f, "denied path (sensitive location): {}", p)
-            }
-            PathError::OutsideAllowed(p) => {
-                write!(f, "path outside allowed roots: {}", p)
+            PathError::OutsideWhitelist(p) => {
+                write!(f, "path outside whitelist: {}", p)
             }
             PathError::ResolutionFailed(msg) => {
                 write!(f, "path resolution failed: {}", msg)
@@ -73,9 +62,11 @@ impl std::error::Error for PathError {}
 
 // ─── Path helpers ──────────────────────────────────────────────────────────
 
-/// Returns the user's home directory from `$HOME`, if set and non-empty.
+/// Returns the user's home directory from `$HOME` (Unix) or `%USERPROFILE%`
+/// (Windows), if set and non-empty.
 fn home_dir() -> Option<PathBuf> {
     std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
         .filter(|p| !p.as_os_str().is_empty())
 }
@@ -97,116 +88,93 @@ pub fn expand_tilde(input: &str) -> PathBuf {
     PathBuf::from(input)
 }
 
-// ─── Policy tables ─────────────────────────────────────────────────────────
+// ─── Whitelist ─────────────────────────────────────────────────────────────
 
-/// Sensitive subdirectories under `$HOME` that must never be read.
-const DENIED_HOME_SUBDIRS: &[&str] = &[
-    ".ssh",
-    ".gnupg",
-    ".aws",
-    ".docker",
-    ".kube",
-    ".config/systemd",
-    ".local/share/keyrings",
-];
-
-/// Sensitive absolute paths that must never be read.
-const DENIED_ABSOLUTE: &[&str] = &[
-    "/etc/shadow",
-    "/etc/gshadow",
-    "/etc/shadow-",
-    "/etc/gshadow-",
-    "/etc/ssh",
-    "/root",
-    "/proc",
-    "/sys",
-];
-
-/// Returns `true` if the canonical path falls inside any denied location.
-fn is_denied(canonical: &Path) -> bool {
-    // Absolute denials — apply unconditionally.
-    for denied in DENIED_ABSOLUTE {
-        let denied_path = Path::new(denied);
-        // `/root` is only denied when running as non-root.
-        if *denied == "/root" && unix_uid() == 0 {
-            continue;
-        }
-        if canonical == denied_path || canonical.starts_with(denied_path) {
+/// Returns `true` if the canonical path falls inside any whitelisted root.
+///
+/// Whitelist (cross-platform):
+/// - **Per-user config dir**: `~/.config/zenritme/` on Unix,
+///   `%APPDATA%\zenritme\` on Windows.
+/// - **System config dir** (Unix only): `/etc/zenritme/`.
+/// - **Current working directory**: `.` (relative paths resolved here).
+/// - **System temp dir**: `$TMPDIR` / `/tmp` on Unix, `%TEMP%` on Windows.
+fn is_whitelisted(canonical: &Path) -> bool {
+    for root in allowed_roots() {
+        if canonical == root || canonical.starts_with(&root) {
             return true;
-        }
-    }
-    // Home-relative denials — only apply when HOME is set.
-    if let Some(home) = home_dir() {
-        for sub in DENIED_HOME_SUBDIRS {
-            let denied_path = home.join(sub);
-            if canonical == denied_path || canonical.starts_with(&denied_path) {
-                return true;
-            }
         }
     }
     false
 }
 
-/// Returns `true` if the canonical path falls inside any allowed root.
-fn is_allowed(canonical: &Path) -> bool {
-    // 1. Current working directory (recursive).
+/// Compute the list of allowed root directories for the current platform.
+///
+/// Roots that do not exist on this machine are still returned (the
+/// `starts_with` check will simply never match a non-existent path), so the
+/// whitelist is stable across environments.
+fn allowed_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+
+    // 1. Per-user config dir.
+    if let Some(cfg) = user_config_dir() {
+        roots.push(cfg);
+    }
+    // 2. System-wide config dir (Unix only — Windows has no equivalent).
+    if cfg!(unix) {
+        roots.push(PathBuf::from("/etc/zenritme"));
+    }
+    // 3. Current working directory.
     if let Ok(cwd) = std::env::current_dir() {
-        if canonical == cwd || canonical.starts_with(&cwd) {
-            return true;
-        }
+        roots.push(cwd);
     }
-    // 2. Home directory (recursive) — covers ~/.config/zenritme/ and
-    //    ~/.local/share/zenritme/ automatically since they are subdirs.
-    if let Some(home) = home_dir() {
-        if canonical == home || canonical.starts_with(&home) {
-            return true;
-        }
+    // 4. System temp dir.
+    roots.push(std::env::temp_dir());
+
+    roots
+}
+
+/// Returns the per-user config directory for zenritme, cross-platform.
+///
+/// - Unix: `$HOME/.config/zenritme` (respects `XDG_CONFIG_HOME`)
+/// - Windows: `%APPDATA%\zenritme`
+pub fn user_config_dir() -> Option<PathBuf> {
+    #[cfg(unix)]
+    {
+        // Respect XDG_CONFIG_HOME if set, otherwise fall back to ~/.config.
+        let base = std::env::var_os("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .or_else(|| home_dir().map(|h| h.join(".config")))?;
+        Some(base.join("zenritme"))
     }
-    false
-}
-
-/// Returns the effective Unix UID (0 = root).  Returns a non-zero value on
-/// non-Unix targets so the `/root` deny rule applies.
-#[cfg(unix)]
-fn unix_uid() -> u32 {
-    // SAFETY: `getuid` is async-signal-safe and takes no arguments.
-    unsafe { libc_getuid() }
-}
-
-#[cfg(unix)]
-extern "C" {
-    fn getuid() -> u32;
-}
-
-#[cfg(unix)]
-unsafe fn libc_getuid() -> u32 {
-    getuid()
-}
-
-#[cfg(not(unix))]
-fn unix_uid() -> u32 {
-    1000
+    #[cfg(windows)]
+    {
+        let base = std::env::var_os("APPDATA").map(PathBuf::from)?;
+        Some(base.join("zenritme"))
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        None
+    }
 }
 
 // ─── Public entry point ────────────────────────────────────────────────────
 
-/// Validate a user-provided filesystem path against the security policy.
+/// Validate a user-provided filesystem path against the whitelist policy.
 ///
 /// Steps:
 /// 1. Trim and reject empty input.
 /// 2. Expand leading `~` to `$HOME`.
-/// 3. **String-based policy check** on the expanded path — catches obvious
-///    denials (`~/.ssh/`, `/etc/shadow`, `/proc/`) and out-of-allowlist paths
-///    without touching the filesystem.
-/// 4. **Canonical policy check** — if the file (or its parent) exists on disk,
-///    canonicalize it (resolves symlinks) and re-apply the policy.  This
-///    catches symlink-escape attacks where a symlink inside an allowed root
-///    points to a denied location.
-/// 5. If the file does not yet exist and the parent cannot be canonicalized
-///    either, accept the string-validated expanded path (the user may create
-///    the file later).
+/// 3. Resolve relative paths against the current working directory.
+/// 4. **String-based whitelist check** on the resolved path — rejects paths
+///    outside all allowed roots without touching the filesystem.  This
+///    catches `~/.ssh/`, `/etc/shadow`, `/usr/...`, etc. even when the file
+///    does not exist.
+/// 5. **Canonical check for symlink escape** — if the file (or its parent)
+///    exists on disk, canonicalize it (resolves symlinks) and re-apply the
+///    whitelist.  This catches symlinks inside an allowed root that point
+///    outside.  Non-existent files skip this step and use the resolved path.
 ///
-/// Returns the canonicalized path when possible, otherwise the expanded path.
+/// Returns the canonicalized path when possible, otherwise the resolved path.
 pub fn validate_user_path(input: &str) -> Result<PathBuf, PathError> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
@@ -215,8 +183,7 @@ pub fn validate_user_path(input: &str) -> Result<PathBuf, PathError> {
 
     let expanded = expand_tilde(trimmed);
 
-    // Resolve relative paths against the current working directory so that
-    // `./foo.wav` and `foo.wav` are treated as inside-cwd.
+    // Resolve relative paths against the current working directory.
     let resolved = if expanded.is_absolute() {
         expanded
     } else {
@@ -225,22 +192,16 @@ pub fn validate_user_path(input: &str) -> Result<PathBuf, PathError> {
             .map_err(|e| PathError::ResolutionFailed(format!("cwd: {}", e)))?
     };
 
-    // Step 1: string-based check on the resolved path (no FS access).
-    if is_denied(&resolved) {
-        return Err(PathError::Denied(resolved.display().to_string()));
-    }
-    if !is_allowed(&resolved) {
-        return Err(PathError::OutsideAllowed(resolved.display().to_string()));
+    // Step 1: string-based whitelist check (no FS access).
+    if !is_whitelisted(&resolved) {
+        return Err(PathError::OutsideWhitelist(resolved.display().to_string()));
     }
 
     // Step 2: canonical check for symlink-escape detection.
     // If the file exists, canonicalize it directly.
     if let Ok(canonical) = std::fs::canonicalize(&resolved) {
-        if is_denied(&canonical) {
-            return Err(PathError::Denied(canonical.display().to_string()));
-        }
-        if !is_allowed(&canonical) {
-            return Err(PathError::OutsideAllowed(canonical.display().to_string()));
+        if !is_whitelisted(&canonical) {
+            return Err(PathError::OutsideWhitelist(canonical.display().to_string()));
         }
         return Ok(canonical);
     }
@@ -248,11 +209,8 @@ pub fn validate_user_path(input: &str) -> Result<PathBuf, PathError> {
     // Step 3: file may not exist yet — canonicalize parent and re-join.
     if let Some(parent) = resolved.parent() {
         if let Ok(canonical_parent) = std::fs::canonicalize(parent) {
-            if is_denied(&canonical_parent) {
-                return Err(PathError::Denied(canonical_parent.display().to_string()));
-            }
-            if !is_allowed(&canonical_parent) {
-                return Err(PathError::OutsideAllowed(
+            if !is_whitelisted(&canonical_parent) {
+                return Err(PathError::OutsideWhitelist(
                     canonical_parent.display().to_string(),
                 ));
             }
@@ -262,7 +220,7 @@ pub fn validate_user_path(input: &str) -> Result<PathBuf, PathError> {
         }
     }
 
-    // Step 4: filesystem access failed but string checks passed — accept the
+    // Step 4: filesystem access failed but string check passed — accept the
     // resolved path.  This allows paths to files the user will create later.
     Ok(resolved)
 }
@@ -278,7 +236,6 @@ mod tests {
     #[test]
     fn expand_tilde_alone() {
         let expanded = expand_tilde("~");
-        // Either HOME or fallback "~" (when HOME unset in test env).
         if let Some(home) = home_dir() {
             assert_eq!(expanded, home);
         } else {
@@ -307,128 +264,130 @@ mod tests {
         assert_eq!(expand_tilde("/home/~weird"), PathBuf::from("/home/~weird"));
     }
 
-    // ── is_denied ─────────────────────────────────────────────────────────
-
-    #[test]
-    fn denied_absolute_etc_shadow() {
-        assert!(is_denied(Path::new("/etc/shadow")));
-        assert!(is_denied(Path::new("/etc/shadow-")));
-        assert!(is_denied(Path::new("/etc/gshadow")));
-    }
-
-    #[test]
-    fn denied_absolute_proc_sys() {
-        assert!(is_denied(Path::new("/proc")));
-        assert!(is_denied(Path::new("/proc/self")));
-        assert!(is_denied(Path::new("/sys")));
-        assert!(is_denied(Path::new("/sys/kernel")));
-    }
-
-    #[test]
-    fn denied_absolute_etc_ssh() {
-        assert!(is_denied(Path::new("/etc/ssh")));
-        assert!(is_denied(Path::new("/etc/ssh/sshd_config")));
-    }
+    // ── is_whitelisted — explicit denials (whitelist-only) ────────────────
 
     #[test]
     fn denied_home_ssh() {
         if let Some(home) = home_dir() {
-            assert!(is_denied(&home.join(".ssh")));
-            assert!(is_denied(&home.join(".ssh/id_rsa")));
-            assert!(is_denied(&home.join(".ssh/config")));
+            assert!(!is_whitelisted(&home.join(".ssh")));
+            assert!(!is_whitelisted(&home.join(".ssh/id_rsa")));
         }
     }
 
     #[test]
-    fn denied_home_gnupg() {
+    fn denied_etc_shadow() {
+        assert!(!is_whitelisted(Path::new("/etc/shadow")));
+        assert!(!is_whitelisted(Path::new("/etc/gshadow")));
+    }
+
+    #[test]
+    fn denied_proc_sys() {
+        assert!(!is_whitelisted(Path::new("/proc")));
+        assert!(!is_whitelisted(Path::new("/proc/self/environ")));
+        assert!(!is_whitelisted(Path::new("/sys")));
+    }
+
+    #[test]
+    fn denied_home_documents() {
         if let Some(home) = home_dir() {
-            assert!(is_denied(&home.join(".gnupg")));
-            assert!(is_denied(&home.join(".gnupg/secring.gpg")));
+            assert!(!is_whitelisted(&home.join("Documents/secret.txt")));
+            assert!(!is_whitelisted(&home.join(".bashrc")));
+            assert!(!is_whitelisted(&home.join(".aws/credentials")));
         }
     }
 
     #[test]
-    fn denied_home_aws_docker_kube() {
-        if let Some(home) = home_dir() {
-            assert!(is_denied(&home.join(".aws/credentials")));
-            assert!(is_denied(&home.join(".docker/config.json")));
-            assert!(is_denied(&home.join(".kube/config")));
+    fn denied_usr_var_tmp_outside_whitelist() {
+        // /usr and /var are NOT whitelisted.
+        assert!(!is_whitelisted(Path::new("/usr/share/sounds/test.wav")));
+        assert!(!is_whitelisted(Path::new("/var/log/syslog")));
+        // /tmp IS whitelisted on Unix (system temp dir).
+        #[cfg(unix)]
+        {
+            // temp_dir() on Linux is usually /tmp.
+            let tmp = std::env::temp_dir();
+            assert!(is_whitelisted(&tmp));
+            assert!(is_whitelisted(&tmp.join("custom.wav")));
+        }
+    }
+
+    // ── is_whitelisted — explicit allowlist ───────────────────────────────
+
+    #[test]
+    fn allowed_user_config_dir() {
+        if let Some(cfg) = user_config_dir() {
+            assert!(is_whitelisted(&cfg));
+            assert!(is_whitelisted(&cfg.join("sounds/start.wav")));
         }
     }
 
     #[test]
-    fn denied_home_systemd_keyrings() {
-        if let Some(home) = home_dir() {
-            assert!(is_denied(&home.join(".config/systemd/user")));
-            assert!(is_denied(&home.join(".local/share/keyrings/login.keyring")));
+    fn allowed_etc_zenritme() {
+        // /etc/zenritme is whitelisted on Unix (system-wide config).
+        if cfg!(unix) {
+            assert!(is_whitelisted(Path::new("/etc/zenritme")));
+            assert!(is_whitelisted(Path::new("/etc/zenritme/sounds.wav")));
         }
     }
 
     #[test]
-    fn denied_root_only_when_non_root() {
-        if unix_uid() != 0 {
-            assert!(is_denied(Path::new("/root")));
-            assert!(is_denied(Path::new("/root/.bashrc")));
-        } else {
-            // When running as root, /root is allowed.
-            assert!(!is_denied(Path::new("/root")));
-        }
-    }
-
-    #[test]
-    fn not_denied_safe_paths() {
-        if let Some(home) = home_dir() {
-            assert!(!is_denied(&home.join("music/chime.wav")));
-            assert!(!is_denied(&home.join(".config/zenritme/sounds.wav")));
-            assert!(!is_denied(&home.join(".local/share/zenritme/x.wav")));
-        }
-        assert!(!is_denied(Path::new("/usr/bin/pw-play")));
-        assert!(!is_denied(Path::new("/tmp/custom.wav")));
-    }
-
-    // ── is_allowed ────────────────────────────────────────────────────────
-
-    #[test]
-    fn allowed_inside_home() {
-        if let Some(home) = home_dir() {
-            assert!(is_allowed(&home));
-            assert!(is_allowed(&home.join("music/chime.wav")));
-            assert!(is_allowed(&home.join(".config/zenritme/x.wav")));
-        }
-    }
-
-    #[test]
-    fn allowed_inside_cwd() {
+    fn allowed_cwd_recursive() {
         if let Ok(cwd) = std::env::current_dir() {
-            assert!(is_allowed(&cwd));
-            assert!(is_allowed(&cwd.join("local.wav")));
-            assert!(is_allowed(&cwd.join("subdir/local.wav")));
+            assert!(is_whitelisted(&cwd));
+            assert!(is_whitelisted(&cwd.join("local.wav")));
+            assert!(is_whitelisted(&cwd.join("subdir/local.wav")));
         }
     }
 
     #[test]
-    fn not_allowed_outside_home_and_cwd() {
-        // /usr is neither home nor cwd (in normal test environments).
-        assert!(!is_allowed(Path::new("/usr/local/bin")));
-        assert!(!is_allowed(Path::new("/var/log/syslog")));
-        // /tmp is NOT in the allowlist (only home, cwd, and home subdirs are).
-        assert!(!is_allowed(Path::new("/tmp")));
-        assert!(!is_allowed(Path::new("/tmp/custom.wav")));
+    fn allowed_temp_dir_recursive() {
+        let tmp = std::env::temp_dir();
+        assert!(is_whitelisted(&tmp));
+        assert!(is_whitelisted(&tmp.join("custom.wav")));
+    }
+
+    // ── allowed_roots ─────────────────────────────────────────────────────
+
+    #[test]
+    fn allowed_roots_non_empty() {
+        let roots = allowed_roots();
+        assert!(!roots.is_empty(), "whitelist must have at least one root");
+    }
+
+    #[test]
+    fn allowed_roots_includes_cwd() {
+        let cwd = std::env::current_dir().expect("cwd must be available");
+        let roots = allowed_roots();
+        assert!(
+            roots.iter().any(|r| r == &cwd),
+            "whitelist must include cwd"
+        );
+    }
+
+    #[test]
+    fn allowed_roots_includes_temp() {
+        let tmp = std::env::temp_dir();
+        let roots = allowed_roots();
+        assert!(
+            roots.iter().any(|r| r == &tmp),
+            "whitelist must include system temp dir"
+        );
+    }
+
+    // ── user_config_dir ───────────────────────────────────────────────────
+
+    #[test]
+    fn user_config_dir_ends_with_zenritme() {
+        if let Some(cfg) = user_config_dir() {
+            assert!(
+                cfg.ends_with("zenritme"),
+                "user config dir must end with 'zenritme': {}",
+                cfg.display()
+            );
+        }
     }
 
     // ── validate_user_path — happy path ───────────────────────────────────
-
-    #[test]
-    fn validate_home_relative_path() {
-        if let Some(home) = home_dir() {
-            // Use a non-existent filename — parent (home) must canonicalize.
-            let r = validate_user_path("~/zenritme-test-sound.wav");
-            assert!(r.is_ok(), "expected Ok, got: {:?}", r);
-            let p = r.unwrap();
-            assert!(p.starts_with(&home));
-            assert!(p.ends_with("zenritme-test-sound.wav"));
-        }
-    }
 
     #[test]
     fn validate_cwd_relative_path() {
@@ -441,7 +400,15 @@ mod tests {
         }
     }
 
-    // ── validate_user_path — rejections ───────────────────────────────────
+    #[test]
+    fn validate_temp_path() {
+        let tmp = std::env::temp_dir();
+        let input = tmp.join("zenritme-test.wav");
+        let r = validate_user_path(input.to_string_lossy().as_ref());
+        assert!(r.is_ok(), "expected Ok for temp path, got: {:?}", r);
+    }
+
+    // ── validate_user_path — rejections (whitelist-only) ──────────────────
 
     #[test]
     fn validate_rejects_empty() {
@@ -452,70 +419,74 @@ mod tests {
     #[test]
     fn validate_rejects_etc_shadow() {
         let r = validate_user_path("/etc/shadow");
-        assert!(matches!(r, Err(PathError::Denied(_))), "got: {:?}", r);
+        assert!(
+            matches!(r, Err(PathError::OutsideWhitelist(_))),
+            "expected OutsideWhitelist, got: {:?}",
+            r
+        );
     }
 
     #[test]
     fn validate_rejects_home_ssh() {
         let r = validate_user_path("~/.ssh/id_rsa");
-        assert!(matches!(r, Err(PathError::Denied(_))), "got: {:?}", r);
+        assert!(
+            matches!(r, Err(PathError::OutsideWhitelist(_))),
+            "expected OutsideWhitelist, got: {:?}",
+            r
+        );
     }
 
     #[test]
     fn validate_rejects_proc() {
         let r = validate_user_path("/proc/self/environ");
-        // /proc is denied AND outside allowed roots — Denied takes precedence.
-        assert!(r.is_err());
+        assert!(r.is_err(), "/proc must be rejected");
     }
 
     #[test]
-    fn validate_rejects_tmp_outside_allowed() {
-        let r = validate_user_path("/tmp/custom.wav");
-        assert!(
-            matches!(r, Err(PathError::OutsideAllowed(_))),
-            "expected OutsideAllowed, got: {:?}",
-            r
-        );
+    fn validate_rejects_home_documents() {
+        if let Some(home) = home_dir() {
+            let input = home.join("Documents/secret.txt");
+            let r = validate_user_path(input.to_string_lossy().as_ref());
+            assert!(
+                matches!(r, Err(PathError::OutsideWhitelist(_))),
+                "expected OutsideWhitelist, got: {:?}",
+                r
+            );
+        }
     }
 
     #[test]
     fn validate_rejects_usr_path() {
         let r = validate_user_path("/usr/share/sounds/test.wav");
         assert!(
-            matches!(r, Err(PathError::OutsideAllowed(_))),
+            matches!(r, Err(PathError::OutsideWhitelist(_))),
             "got: {:?}",
             r
         );
     }
 
-    // ── Policy table sanity ───────────────────────────────────────────────
-
     #[test]
-    fn denied_tables_non_empty() {
-        assert!(!DENIED_ABSOLUTE.is_empty());
-        assert!(!DENIED_HOME_SUBDIRS.is_empty());
+    fn validate_rejects_home_bashrc() {
+        let r = validate_user_path("~/.bashrc");
+        assert!(
+            matches!(r, Err(PathError::OutsideWhitelist(_))),
+            "got: {:?}",
+            r
+        );
     }
 
-    #[test]
-    fn denied_absolute_all_start_with_slash() {
-        for p in DENIED_ABSOLUTE {
-            assert!(
-                p.starts_with('/'),
-                "denied absolute must start with /: {}",
-                p
-            );
-        }
-    }
+    // ── Cross-platform sanity ─────────────────────────────────────────────
 
     #[test]
-    fn denied_home_subdirs_never_start_with_slash() {
-        for p in DENIED_HOME_SUBDIRS {
+    fn whitelist_is_cross_platform_aware() {
+        let roots = allowed_roots();
+        // Every root must be absolute (no relative roots in the whitelist).
+        for r in &roots {
             assert!(
-                !p.starts_with('/'),
-                "denied home subdir must be relative: {}",
-                p
+                r.is_absolute(),
+                "whitelist root must be absolute: {}",
+                r.display()
             );
-            assert!(!p.is_empty());
         }
     }
 }

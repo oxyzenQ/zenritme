@@ -86,9 +86,9 @@ fn build_usage() -> String {
          \x20 ZENRITME_SOUND_COMPLETE  override complete sound file\n\
          \x20 ZENRITME_SOUND_FILE      global fallback for all events\n\
          \x20 ZENRITME_VISUAL_BELL=1   enable visual bell (screen flash)\n\n\
-         Sound file paths are validated against a strict security policy\n\
-         \x20 (only ~, ., ~/.config/zenritme/, ~/.local/share/zenritme/).\n\
-         \x20 See --help security notes or docs/SECURITY.md.",
+         Sound file paths are validated against a strict whitelist policy\n\
+         \x20 (only ~/.config/zenritme/, ., /etc/zenritme/, system temp).\n\
+         \x20 Everything else is denied. See --help or docs/SECURITY.md.",
         ver = env!("CARGO_PKG_VERSION")
     )
 }
@@ -858,8 +858,8 @@ mod tests {
     fn usage_mentions_security_policy() {
         let s = usage();
         assert!(
-            s.contains("security policy") || s.contains("validated"),
-            "usage should mention path security policy"
+            s.contains("whitelist policy") || s.contains("whitelist"),
+            "usage should mention whitelist policy"
         );
     }
 }
