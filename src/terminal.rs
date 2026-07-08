@@ -30,9 +30,11 @@ impl TerminalGuard {
         let saved = capture_stty_state(tty.as_ref());
 
         // ── 2. Enter raw mode ─────────────────────────────────────────────────
+        // -isig: prevent Ctrl+C/SIGQUIT from generating signals (they become
+        //         regular bytes 0x03/0x1C delivered through the input channel).
         if let Some(t) = tty.as_ref().and_then(|f| f.try_clone().ok()) {
             let _ = Command::new("stty")
-                .args(["-icanon", "-echo", "min", "1", "time", "0"])
+                .args(["-icanon", "-echo", "-isig", "min", "1", "time", "0"])
                 .stdin(Stdio::from(t))
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())

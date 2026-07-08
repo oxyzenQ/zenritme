@@ -15,14 +15,58 @@ mod update;
 mod version;
 
 use mode::PomodoroPhase;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
+
+// ── Signal handling (SIGTERM / SIGHUP) ────────────────────────────────────
+// `pkill zenritme` sends SIGTERM.  Without a handler the OS terminates the
+// process immediately — no destructors run, terminal is left dirty.
+// We install a handler that sets an atomic flag; the main loop checks it
+// each iteration and breaks cleanly so `TerminalGuard::drop()` runs.
+//
+// SIGKILL (`kill -9`) cannot be caught — this is an OS limitation.
+//
+// The handler only sets an AtomicBool (async-signal-safe).  The main loop
+// polls it, so there is a worst-case latency of one sleep cycle (max 1 s).
+
+#[cfg(unix)]
+static TERMINATE_REQUESTED: AtomicBool = AtomicBool::new(false);
+
+#[cfg(unix)]
+const SIGTERM: i32 = 15;
+
+#[cfg(unix)]
+const SIGHUP: i32 = 1;
+
+#[cfg(unix)]
+extern "C" {
+    /// POSIX signal() — installs a simple signal handler.
+    fn signal(signum: i32, handler: extern "C" fn(i32)) -> *const ();
+}
+
+#[cfg(unix)]
+extern "C" fn handle_terminate_signal(_: i32) {
+    TERMINATE_REQUESTED.store(true, Ordering::Relaxed);
+}
+
+/// Install signal handlers for graceful termination on SIGTERM and SIGHUP.
+/// No-op on non-Unix platforms.
+#[cfg(unix)]
+fn install_terminate_handler() {
+    unsafe {
+        signal(SIGTERM, handle_terminate_signal);
+        signal(SIGHUP, handle_terminate_signal);
+    }
+}
+
+#[cfg(not(unix))]
+fn install_terminate_handler() {}
 
 fn main() {
     // Register temp-file cleanup so embedded sounds are removed on exit.
     // TempCleanupGuard covers normal return and panic unwind.
-    // Signal termination (SIGINT, SIGKILL) may bypass Drop — see
-    // docs/ENDURANCE.md "Signal termination caveat" for details.
+    // SIGKILL may still bypass Drop — see docs/ENDURANCE.md for details.
     let _cleanup_guard = sound::TempCleanupGuard::install();
 
     let cmd = match cli::parse_args(std::env::args().skip(1)) {
@@ -83,6 +127,7 @@ fn run(
     // the terminal (leaves alt screen, shows cursor, restores stty).
     // This is why we NEVER call `std::process::exit` inside the loop.
     let (_term, rx) = terminal::spawn_input();
+    install_terminate_handler();
     let mut engine = engine::Engine::new(mode);
     let colors = theme.colors();
     let muted = mute || profile.is_silent();
@@ -100,6 +145,13 @@ fn run(
         if matches!(input_action, LoopAction::Break) {
             break;
         }
+
+        // Check for external termination (SIGTERM / SIGHUP from pkill, etc.).
+        #[cfg(unix)]
+        if TERMINATE_REQUESTED.load(Ordering::Relaxed) {
+            break;
+        }
+
         let input_changed = true;
 
         // ── Advance engine ────────────────────────────────────────────────────
