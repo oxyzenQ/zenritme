@@ -22,7 +22,6 @@ pub enum Mode {
         short_break: std::time::Duration,
         long_break: std::time::Duration,
         cycles: u32,
-        emoji: u8,
     },
 }
 

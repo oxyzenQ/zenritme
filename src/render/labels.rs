@@ -18,10 +18,10 @@ pub(crate) fn build_title(state: &super::RenderState) -> String {
         Mode::TimerUp => "TIMER UP".to_string(),
         Mode::TimerDown { .. } => "TIMER DOWN".to_string(),
         Mode::Stopwatch => "STOPWATCH".to_string(),
-        Mode::Pomodoro { cycles, emoji, .. } => {
+        Mode::Pomodoro { cycles, .. } => {
             let phase = state.engine_phase;
             let cycle = state.engine_cycle;
-            let base = match state.state {
+            match state.state {
                 EngineState::Completed => "COMPLETE".to_string(),
                 _ => match phase {
                     PomodoroPhase::Focus => format!("FOCUS {}/{}", cycle, cycles),
@@ -30,9 +30,7 @@ pub(crate) fn build_title(state: &super::RenderState) -> String {
                     }
                     PomodoroPhase::LongBreak => "LONG BREAK".to_string(),
                 },
-            };
-            let dyn_idx = emoji.wrapping_add((state.elapsed.as_secs() / 5) as u8);
-            format!("{} {}", base, pomodoro_emoji(dyn_idx))
+            }
         }
     }
 }
@@ -131,24 +129,6 @@ pub(crate) fn push_control_hints(
     lines.push(colored(hint, c.dim, r));
 }
 
-// ─── Pomodoro emoji ──────────────────────────────────────────────────────────
-
-pub(crate) fn pomodoro_emoji(idx: u8) -> &'static str {
-    const EMOJIS: [&str; 10] = [
-        "\u{1F345}", // 🍅
-        "\u{2615}",  // ☕
-        "\u{1F319}", // 🌙
-        "\u{26A1}",  // ⚡
-        "\u{1F9E0}", // 🧠
-        "\u{1F3A7}", // 🎧
-        "\u{1F33F}", // 🌿
-        "\u{1F4CC}", // 📌
-        "\u{1F525}", // 🔥
-        "\u{1F56F}", // 🕯️
-    ];
-    EMOJIS[(idx as usize) % EMOJIS.len()]
-}
-
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -173,21 +153,6 @@ mod tests {
     #[test]
     fn format_hms_zero() {
         assert_eq!(format_hms(Duration::ZERO), "00:00");
-    }
-
-    #[test]
-    fn pomodoro_emoji_cycles() {
-        // Just verify it returns a non-empty string without panicking
-        assert!(!pomodoro_emoji(0).is_empty());
-        assert!(!pomodoro_emoji(5).is_empty());
-        assert!(!pomodoro_emoji(255).is_empty());
-    }
-
-    #[test]
-    fn pomodoro_emoji_wraps() {
-        // Index 10 should wrap to index 0
-        assert_eq!(pomodoro_emoji(0), pomodoro_emoji(10));
-        assert_eq!(pomodoro_emoji(0), pomodoro_emoji(20));
     }
 
     #[test]

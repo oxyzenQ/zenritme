@@ -47,7 +47,7 @@ pub fn usage() -> String {
          \x20 zenritme --help\n\
          \x20 zenritme -V, --version\n\n\
          Options:\n\
-         \x20 --theme <THEME>          void | ember | aura | forest | tron | mono  (default: void)\n\
+         \x20 --theme <THEME>          void | ember | aura | forest | tron | tron-green | tron-cyan | tron-orange | tron-red | tron-yellow | mono  (default: void)\n\
          \x20 --view <VIEW>            minimal | orbit | cinematic             (default: orbit)\n\
          \x20 --sound-profile <P>    calm | silent                          (default: calm)\n\
          \x20 --mute                   suppress all notification sounds       (default: off)\n\

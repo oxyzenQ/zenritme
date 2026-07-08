@@ -6,7 +6,6 @@
 use crate::mode::Mode;
 use crate::render::ViewMode;
 use crate::theme::Theme;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::duration::parse_duration;
 
@@ -128,21 +127,12 @@ where
             short_break,
             long_break,
             cycles,
-            emoji: pick_pomodoro_emoji(),
         },
         theme,
         view,
         mute,
         profile,
     })
-}
-
-fn pick_pomodoro_emoji() -> u8 {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .subsec_nanos();
-    (nanos as u8) % 10
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

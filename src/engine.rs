@@ -270,7 +270,6 @@ mod tests {
             short_break: Duration::from_millis(break_ms),
             long_break: Duration::from_millis(long_break_ms),
             cycles,
-            emoji: 0,
         })
     }
 

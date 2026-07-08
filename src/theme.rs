@@ -11,6 +11,11 @@ pub enum Theme {
     Aura,
     Forest,
     Tron,
+    TronGreen,
+    TronCyan,
+    TronOrange,
+    TronRed,
+    TronYellow,
     Mono,
 }
 
@@ -23,6 +28,11 @@ impl Theme {
             "aura" => Some(Self::Aura),
             "forest" => Some(Self::Forest),
             "tron" => Some(Self::Tron),
+            "tron-green" => Some(Self::TronGreen),
+            "tron-cyan" => Some(Self::TronCyan),
+            "tron-orange" => Some(Self::TronOrange),
+            "tron-red" => Some(Self::TronRed),
+            "tron-yellow" => Some(Self::TronYellow),
             "mono" => Some(Self::Mono),
             _ => None,
         }
@@ -36,6 +46,11 @@ impl Theme {
             Self::Aura => ColorFields::aura(),
             Self::Forest => ColorFields::forest(),
             Self::Tron => ColorFields::tron(),
+            Self::TronGreen => ColorFields::tron_green(),
+            Self::TronCyan => ColorFields::tron_cyan(),
+            Self::TronOrange => ColorFields::tron_orange(),
+            Self::TronRed => ColorFields::tron_red(),
+            Self::TronYellow => ColorFields::tron_yellow(),
             Self::Mono => ColorFields::plain(),
         }
     }
@@ -167,6 +182,81 @@ impl ColorFields {
             reset: RESET,
         }
     }
+
+    fn tron_green() -> Self {
+        Self {
+            title: "\x1b[1;38;5;82m",
+            time: "\x1b[1;38;5;119m",
+            progress_fill: "\x1b[38;5;46m",
+            progress_empty: "\x1b[38;5;22m",
+            label: "\x1b[38;5;28m",
+            dim: "\x1b[38;5;22m",
+            border: "\x1b[38;5;28m",
+            accent: "\x1b[38;5;155m",
+            spinner: "\x1b[38;5;119m",
+            reset: RESET,
+        }
+    }
+
+    fn tron_cyan() -> Self {
+        Self {
+            title: "\x1b[1;38;5;81m",
+            time: "\x1b[1;38;5;123m",
+            progress_fill: "\x1b[38;5;51m",
+            progress_empty: "\x1b[38;5;17m",
+            label: "\x1b[38;5;25m",
+            dim: "\x1b[38;5;17m",
+            border: "\x1b[38;5;25m",
+            accent: "\x1b[38;5;159m",
+            spinner: "\x1b[38;5;123m",
+            reset: RESET,
+        }
+    }
+
+    fn tron_orange() -> Self {
+        Self {
+            title: "\x1b[1;38;5;214m",
+            time: "\x1b[1;38;5;222m",
+            progress_fill: "\x1b[38;5;208m",
+            progress_empty: "\x1b[38;5;52m",
+            label: "\x1b[38;5;88m",
+            dim: "\x1b[38;5;52m",
+            border: "\x1b[38;5;88m",
+            accent: "\x1b[38;5;220m",
+            spinner: "\x1b[38;5;222m",
+            reset: RESET,
+        }
+    }
+
+    fn tron_red() -> Self {
+        Self {
+            title: "\x1b[1;38;5;197m",
+            time: "\x1b[1;38;5;211m",
+            progress_fill: "\x1b[38;5;196m",
+            progress_empty: "\x1b[38;5;52m",
+            label: "\x1b[38;5;88m",
+            dim: "\x1b[38;5;52m",
+            border: "\x1b[38;5;88m",
+            accent: "\x1b[38;5;203m",
+            spinner: "\x1b[38;5;211m",
+            reset: RESET,
+        }
+    }
+
+    fn tron_yellow() -> Self {
+        Self {
+            title: "\x1b[1;38;5;226m",
+            time: "\x1b[1;38;5;228m",
+            progress_fill: "\x1b[38;5;220m",
+            progress_empty: "\x1b[38;5;58m",
+            label: "\x1b[38;5;94m",
+            dim: "\x1b[38;5;58m",
+            border: "\x1b[38;5;94m",
+            accent: "\x1b[38;5;229m",
+            spinner: "\x1b[38;5;228m",
+            reset: RESET,
+        }
+    }
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -182,6 +272,11 @@ mod tests {
         assert_eq!(Theme::from_name("Aura"), Some(Theme::Aura));
         assert_eq!(Theme::from_name("forest"), Some(Theme::Forest));
         assert_eq!(Theme::from_name("tron"), Some(Theme::Tron));
+        assert_eq!(Theme::from_name("TRON-GREEN"), Some(Theme::TronGreen));
+        assert_eq!(Theme::from_name("tron-cyan"), Some(Theme::TronCyan));
+        assert_eq!(Theme::from_name("tron-orange"), Some(Theme::TronOrange));
+        assert_eq!(Theme::from_name("tron-red"), Some(Theme::TronRed));
+        assert_eq!(Theme::from_name("tron-yellow"), Some(Theme::TronYellow));
         assert_eq!(Theme::from_name("mono"), Some(Theme::Mono));
     }
 
@@ -230,6 +325,11 @@ mod tests {
             Theme::Aura,
             Theme::Forest,
             Theme::Tron,
+            Theme::TronGreen,
+            Theme::TronCyan,
+            Theme::TronOrange,
+            Theme::TronRed,
+            Theme::TronYellow,
         ] {
             let c = theme.palette();
             assert!(
