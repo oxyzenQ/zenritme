@@ -24,7 +24,7 @@ _zenritme() {
     )
 
     local -a opts=(
-        '--theme[Color theme]:theme:(void ember aura forest mono)'
+        '--theme[Color theme]:theme:(void ember aura forest tron tron-green tron-cyan tron-orange tron-red tron-yellow mono)'
         '--view[Display view mode]:view:(minimal orbit cinematic)'
         '--sound-profile[Sound profile]:profile:(calm silent)'
         '--mute[Suppress all notification sounds]'

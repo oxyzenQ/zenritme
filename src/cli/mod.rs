@@ -238,19 +238,23 @@ where
     }
 }
 
+// ─── Shared test helper ────────────────────────────────────────────────────
+
+/// Build a `parse_args`-compatible iterator from a slice of string literals.
+/// Shared across CLI submodules to avoid duplication.
+#[cfg(test)]
+pub(crate) fn args(v: &[&str]) -> impl Iterator<Item = String> {
+    v.iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .into_iter()
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// Helper: build a `parse_args`-compatible iterator from a slice of string literals.
-    fn args(v: &[&str]) -> impl Iterator<Item = String> {
-        v.iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>()
-            .into_iter()
-    }
 
     // ── Duration parsing (tested via --timer-down) ────────────────────────────
 

@@ -141,18 +141,8 @@ impl Engine {
                 }
             }
             Mode::TimerDown { .. } => {}
-            Mode::Pomodoro {
-                focus,
-                short_break,
-                long_break,
-                cycles,
-                ..
-            } => {
-                let phase_total = match self.pomo_phase {
-                    PomodoroPhase::Focus => focus,
-                    PomodoroPhase::ShortBreak => short_break,
-                    PomodoroPhase::LongBreak => long_break,
-                };
+            Mode::Pomodoro { .. } => {
+                let phase_total = self.mode.phase_duration(self.pomo_phase);
 
                 if self.phase_elapsed() >= phase_total {
                     // Long break complete → session done
@@ -165,7 +155,7 @@ impl Engine {
                     }
 
                     let (next_phase, next_cycle) = match self.pomo_phase {
-                        PomodoroPhase::Focus if self.pomo_cycle >= cycles => {
+                        PomodoroPhase::Focus if self.pomo_cycle >= self.mode.pomodoro_cycles() => {
                             (PomodoroPhase::LongBreak, self.pomo_cycle)
                         }
                         PomodoroPhase::Focus => (PomodoroPhase::ShortBreak, self.pomo_cycle),
@@ -216,17 +206,8 @@ impl Engine {
     pub fn remaining(&self) -> Option<Duration> {
         match self.mode {
             Mode::TimerDown { total } => Some(total.saturating_sub(self.elapsed())),
-            Mode::Pomodoro {
-                focus,
-                short_break,
-                long_break,
-                ..
-            } => {
-                let phase_total = match self.pomo_phase {
-                    PomodoroPhase::Focus => focus,
-                    PomodoroPhase::ShortBreak => short_break,
-                    PomodoroPhase::LongBreak => long_break,
-                };
+            Mode::Pomodoro { .. } => {
+                let phase_total = self.mode.phase_duration(self.pomo_phase);
                 Some(phase_total.saturating_sub(self.phase_elapsed()))
             }
             _ => None,

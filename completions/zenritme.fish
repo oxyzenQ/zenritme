@@ -22,7 +22,7 @@ complete -c zenritme -n '__fish_is_first_arg' -l check-update -d 'Check for newe
 complete -c zenritme -n '__fish_is_first_arg' -l check-updated -d 'Alias for --check-update'
 
 # Options
-complete -c zenritme -l theme -d 'Color theme' -xa 'void ember aura forest mono'
+complete -c zenritme -l theme -d 'Color theme' -xa 'void ember aura forest tron tron-green tron-cyan tron-orange tron-red tron-yellow mono'
 complete -c zenritme -l view -d 'Display view mode' -xa 'minimal orbit cinematic'
 complete -c zenritme -l sound-profile -d 'Sound profile' -xa 'calm silent'
 complete -c zenritme -l mute -d 'Suppress all notification sounds'

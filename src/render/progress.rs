@@ -3,7 +3,7 @@
 // Zenritme
 // Copyright (C) 2026 rezky_nightky (oxyzenQ)
 
-use crate::mode::{Mode, PomodoroPhase};
+use crate::mode::Mode;
 use crate::theme::ColorFields;
 
 use super::colored;
@@ -20,17 +20,8 @@ pub(crate) fn compute_progress(engine: &crate::engine::Engine) -> Option<f32> {
                 Some((engine.elapsed().as_secs_f32() / total.as_secs_f32()).clamp(0.0, 1.0))
             }
         }
-        Mode::Pomodoro {
-            focus,
-            short_break,
-            long_break,
-            ..
-        } => {
-            let phase_total = match engine.pomo_phase() {
-                PomodoroPhase::Focus => focus,
-                PomodoroPhase::ShortBreak => short_break,
-                PomodoroPhase::LongBreak => long_break,
-            };
+        Mode::Pomodoro { .. } => {
+            let phase_total = engine.mode().phase_duration(engine.pomo_phase());
             let remaining = engine.remaining()?;
             if phase_total.is_zero() {
                 None
@@ -63,61 +54,46 @@ pub(crate) fn colored_bar(progress: f32, width: usize, c: &ColorFields) -> Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A no-color `ColorFields` for tests (all codes empty).
-    fn plain_colors() -> ColorFields {
-        ColorFields {
-            title: "",
-            time: "",
-            progress_fill: "",
-            progress_empty: "",
-            label: "",
-            dim: "",
-            border: "",
-            accent: "",
-            spinner: "",
-            reset: "",
-        }
-    }
+    use crate::theme::ColorFields;
 
     #[test]
     fn colored_bar_zero() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(0.0, 10, &c);
         assert!(bar.contains("  0%"));
     }
 
     #[test]
     fn colored_bar_half() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(0.5, 10, &c);
         assert!(bar.contains(" 50%"));
     }
 
     #[test]
     fn colored_bar_full() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(1.0, 10, &c);
         assert!(bar.contains("100%"));
     }
 
     #[test]
     fn colored_bar_clamps_above_one() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(1.5, 10, &c);
         assert!(bar.contains("100%"));
     }
 
     #[test]
     fn colored_bar_clamps_below_zero() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(-0.5, 10, &c);
         assert!(bar.contains("  0%"));
     }
 
     #[test]
     fn colored_bar_width_one() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(0.75, 1, &c);
         // At width 1, 0.75 rounds to 1 filled block
         assert!(bar.starts_with('['));
@@ -126,7 +102,7 @@ mod tests {
 
     #[test]
     fn colored_bar_empty_width() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(0.5, 0, &c);
         // Width 0: progress is still shown but no fill/empty blocks
         assert!(bar.contains(" 50%"));
@@ -136,7 +112,7 @@ mod tests {
 
     #[test]
     fn colored_bar_narrow_width() {
-        let c = plain_colors();
+        let c = ColorFields::plain();
         let bar = colored_bar(0.3, 4, &c);
         // 0.3 * 4 = 1.2, rounds to 1 filled
         assert!(bar.contains(" 30%"));

@@ -64,15 +64,6 @@ impl SoundProfile {
     pub fn is_silent(self) -> bool {
         self == SoundProfile::Silent
     }
-
-    /// Returns the string name for display.
-    #[allow(dead_code)]
-    pub fn as_str(self) -> &'static str {
-        match self {
-            SoundProfile::Calm => "calm",
-            SoundProfile::Silent => "silent",
-        }
-    }
 }
 
 // ─── Sound event enum ────────────────────────────────────────────────────────
@@ -124,21 +115,6 @@ pub fn play_event(event: SoundEvent) {
 
     if std::env::var("ZENRITME_VISUAL_BELL").is_ok() {
         playback::visual_bell();
-    }
-}
-
-// ─── Legacy multi-beep (kept for backward compat) ──────────────────────────
-
-/// Plays the *Complete* sound `times` times with a short gap.  Kept for
-/// backward compatibility; the main loop now uses `play_event` directly.
-#[allow(dead_code)]
-pub fn beep(times: u32) {
-    let times = times.max(1);
-    for i in 0..times {
-        play_event(SoundEvent::Complete);
-        if i + 1 < times {
-            std::thread::sleep(std::time::Duration::from_millis(120));
-        }
     }
 }
 
@@ -275,18 +251,6 @@ mod tests {
     #[test]
     fn profile_silent_is_silent() {
         assert!(SoundProfile::Silent.is_silent());
-    }
-
-    #[test]
-    fn profile_as_str_roundtrip() {
-        assert_eq!(
-            SoundProfile::from_name(SoundProfile::Calm.as_str()),
-            Some(SoundProfile::Calm)
-        );
-        assert_eq!(
-            SoundProfile::from_name(SoundProfile::Silent.as_str()),
-            Some(SoundProfile::Silent)
-        );
     }
 
     // ── Mute/profile precedence ───────────────────────────────────────────

@@ -14,21 +14,14 @@ mod theme;
 mod update;
 mod version;
 
-use mode::PomodoroPhase;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-// ── Signal handling (SIGTERM / SIGHUP) ────────────────────────────────────
-// `pkill zenritme` sends SIGTERM.  Without a handler the OS terminates the
-// process immediately — no destructors run, terminal is left dirty.
-// We install a handler that sets an atomic flag; the main loop checks it
-// each iteration and breaks cleanly so `TerminalGuard::drop()` runs.
-//
-// SIGKILL (`kill -9`) cannot be caught — this is an OS limitation.
-//
-// The handler only sets an AtomicBool (async-signal-safe).  The main loop
-// polls it, so there is a worst-case latency of one sleep cycle (max 1 s).
+// ── Signal handling (SIGTERM / SIGHUP / SIGINT) ────────────────────────
+// `pkill zenritme` sends SIGTERM.  External `kill -INT <pid>` sends SIGINT.
+// Without handlers the OS terminates the process immediately — no
+// destructors run, terminal is left dirty.
 
 #[cfg(unix)]
 static TERMINATE_REQUESTED: AtomicBool = AtomicBool::new(false);
@@ -38,6 +31,9 @@ const SIGTERM: i32 = 15;
 
 #[cfg(unix)]
 const SIGHUP: i32 = 1;
+
+#[cfg(unix)]
+const SIGINT: i32 = 2;
 
 #[cfg(unix)]
 extern "C" {
@@ -50,13 +46,19 @@ extern "C" fn handle_terminate_signal(_: i32) {
     TERMINATE_REQUESTED.store(true, Ordering::Relaxed);
 }
 
-/// Install signal handlers for graceful termination on SIGTERM and SIGHUP.
-/// No-op on non-Unix platforms.
+/// Install signal handlers for graceful termination on SIGTERM, SIGHUP,
+/// and SIGINT (external kill, hangup, or interrupt).  No-op on non-Unix.
+///
+/// SIGKILL (`kill -9`) cannot be caught — this is an OS limitation.
+///
+/// The handlers only set an AtomicBool (async-signal-safe).  The main loop
+/// polls it, so there is a worst-case latency of one sleep cycle (max 1 s).
 #[cfg(unix)]
 fn install_terminate_handler() {
     unsafe {
         signal(SIGTERM, handle_terminate_signal);
         signal(SIGHUP, handle_terminate_signal);
+        signal(SIGINT, handle_terminate_signal);
     }
 }
 
@@ -146,13 +148,12 @@ fn run(
             break;
         }
 
-        // Check for external termination (SIGTERM / SIGHUP from pkill, etc.).
+        // Check for external termination (SIGTERM / SIGHUP / SIGINT from
+        // pkill, hangup, or external kill).
         #[cfg(unix)]
         if TERMINATE_REQUESTED.load(Ordering::Relaxed) {
             break;
         }
-
-        let input_changed = true;
 
         // ── Advance engine ────────────────────────────────────────────────────
         engine.tick();
@@ -176,12 +177,8 @@ fn run(
         // Force redraw every tick when < 10 s so sub-second tenths animate.
         let near_end = engine.remaining().is_some_and(|r| r.as_secs() < 10)
             && engine.state() == engine::EngineState::Running;
-        let need_redraw = input_changed
-            || state_changed
-            || phase_changed
-            || second_changed
-            || frame == 0
-            || near_end;
+        let need_redraw =
+            state_changed || phase_changed || second_changed || frame == 0 || near_end;
 
         if need_redraw {
             let state = build_render_state(&engine, &colors, view, frame);
@@ -283,16 +280,7 @@ fn build_render_state<'a>(
         remaining: engine.remaining(),
         total: match engine.mode() {
             mode::Mode::TimerDown { total } => Some(total),
-            mode::Mode::Pomodoro {
-                focus,
-                short_break,
-                long_break,
-                ..
-            } => Some(match engine.pomo_phase() {
-                PomodoroPhase::Focus => focus,
-                PomodoroPhase::ShortBreak => short_break,
-                PomodoroPhase::LongBreak => long_break,
-            }),
+            mode::Mode::Pomodoro { .. } => Some(engine.mode().phase_duration(engine.pomo_phase())),
             _ => None,
         },
         progress: render::compute_progress(engine),

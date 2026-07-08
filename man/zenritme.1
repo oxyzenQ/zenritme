@@ -79,7 +79,8 @@ Options may appear before or after the mode flag.
 .It Fl -theme Ar THEME
 Color theme.
 One of:
-.Em void , ember , aura , forest , mono .
+.Em void , ember , aura , forest , tron , tron-green , tron-cyan ,
+.Em tron-orange , tron-red , tron-yellow , mono .
 Default:
 .Em void .
 .It Fl -view Ar VIEW
@@ -183,17 +184,17 @@ Fish completions
 .El
 .Sh EXIT BEHAVIOR
 Pressing
-.Em q
+.Em q ,
+.Em Esc ,
 or
-.Em Esc
+.Em Ctrl+C
 exits the session and reliably restores terminal state via RAII guards
 (TerminalGuard, TempCleanupGuard).
 .Pp
-Signal-level termination (SIGINT, SIGKILL) may bypass Rust's Drop
-cleanup, leaving the terminal in raw mode.
-If the terminal appears stuck, press Ctrl+J, type
-.Li stty sane ,
-and press Enter, or open a new terminal window.
+Signal-level termination (SIGTERM via\ `pkill`, SIGHUP, SIGINT via external kill)
+is handled gracefully: an async-signal-safe handler sets an atomic flag,
+the main loop breaks cleanly, and destructors restore the terminal.
+Only SIGKILL\ (`kill -9`) cannot be caught.
 .Sh SOURCE
 https://github.com/oxyzenQ/zenritme
 .Sh LICENSE

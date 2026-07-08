@@ -15,7 +15,7 @@ _zenritme() {
 
     case "${prev}" in
         --theme)
-            COMPREPLY=($(compgen -W "void ember aura forest mono" -- "${cur}"))
+            COMPREPLY=($(compgen -W "void ember aura forest tron tron-green tron-cyan tron-orange tron-red tron-yellow mono" -- "${cur}"))
             return ;;
         --view)
             COMPREPLY=($(compgen -W "minimal orbit cinematic" -- "${cur}"))

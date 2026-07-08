@@ -139,18 +139,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::{parse_args, Command};
+    use super::super::{args, parse_args, Command};
     use crate::mode::Mode;
     use crate::render::ViewMode;
     use crate::theme::Theme;
-
-    /// Helper: build a `parse_args`-compatible iterator from a slice of string literals.
-    fn args(v: &[&str]) -> impl Iterator<Item = String> {
-        v.iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>()
-            .into_iter()
-    }
 
     /// Helper: extract the Pomodoro fields from a parsed Command.
     fn pomodoro_fields(
@@ -168,7 +160,6 @@ mod tests {
                     short_break,
                     long_break,
                     cycles,
-                    ..
                 },
             ..
         } = cmd

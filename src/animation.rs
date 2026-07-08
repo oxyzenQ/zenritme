@@ -41,24 +41,6 @@ pub fn orbit(frame: u64) -> String {
     s
 }
 
-/// Fixed-width progress bar with fill and empty characters.
-///
-/// `[████████░░░░░░░░░░░░]  42%`
-///
-/// `█` (U+2588) and `░` (U+2591) are each 1 column wide in most terminals.
-#[allow(dead_code)]
-pub fn progress_bar(progress: f32, width: usize) -> String {
-    let clamped = progress.clamp(0.0, 1.0);
-    let filled = ((clamped * width as f32).round() as usize).min(width);
-    let empty = width - filled;
-    format!(
-        "[{}{}] {:3.0}%",
-        "\u{2588}".repeat(filled),
-        "\u{2591}".repeat(empty),
-        clamped * 100.0,
-    )
-}
-
 /// Completion burst: a pulsing braille fill that cycles through fill stages.
 ///
 /// Used when the timer completes to give a subtle celebratory pulse.
@@ -117,39 +99,6 @@ mod tests {
         let a = orbit(0);
         let b = orbit(7);
         assert_eq!(a.chars().count(), b.chars().count());
-    }
-
-    #[test]
-    fn progress_bar_zero() {
-        let bar = progress_bar(0.0, 10);
-        assert!(bar.starts_with('['));
-        assert!(bar.contains("  0%"));
-    }
-
-    #[test]
-    fn progress_bar_full() {
-        let bar = progress_bar(1.0, 10);
-        assert!(bar.contains("100%"));
-        assert!(!bar.contains('\u{2591}'));
-    }
-
-    #[test]
-    fn progress_bar_half() {
-        let bar = progress_bar(0.5, 10);
-        assert!(bar.contains(" 50%"));
-    }
-
-    #[test]
-    fn progress_bar_clamped() {
-        assert!(progress_bar(1.5, 10).contains("100%"));
-        assert!(progress_bar(-0.5, 10).contains("  0%"));
-    }
-
-    #[test]
-    fn progress_bar_width() {
-        let bar = progress_bar(0.5, 20);
-        assert!(bar.starts_with('['));
-        assert!(bar.contains(']'));
     }
 
     #[test]

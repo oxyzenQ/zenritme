@@ -37,4 +37,31 @@ impl Mode {
             Mode::Pomodoro { .. } => 10,
         }
     }
+
+    /// Returns the duration for a given Pomodoro phase.
+    /// Only valid when `self` is `Mode::Pomodoro`.
+    pub fn phase_duration(&self, phase: PomodoroPhase) -> std::time::Duration {
+        match self {
+            Mode::Pomodoro {
+                focus,
+                short_break,
+                long_break,
+                ..
+            } => match phase {
+                PomodoroPhase::Focus => *focus,
+                PomodoroPhase::ShortBreak => *short_break,
+                PomodoroPhase::LongBreak => *long_break,
+            },
+            _ => std::time::Duration::ZERO,
+        }
+    }
+
+    /// Returns the cycle count for Pomodoro mode.
+    /// Returns 0 for non-Pomodoro modes.
+    pub fn pomodoro_cycles(&self) -> u32 {
+        match self {
+            Mode::Pomodoro { cycles, .. } => *cycles,
+            _ => 0,
+        }
+    }
 }

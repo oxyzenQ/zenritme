@@ -93,7 +93,7 @@ pub struct ColorFields {
 pub const RESET: &str = "\x1b[0m";
 
 impl ColorFields {
-    fn plain() -> Self {
+    pub(crate) fn plain() -> Self {
         Self {
             title: "",
             time: "",
