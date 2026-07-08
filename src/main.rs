@@ -16,6 +16,7 @@ mod version;
 
 use mode::PomodoroPhase;
 use std::sync::mpsc;
+use std::time::{Duration, Instant};
 
 fn main() {
     // Register temp-file cleanup so embedded sounds are removed on exit.
@@ -80,6 +81,7 @@ fn run(
     let mut last_phase = engine.phase_marker();
     let mut frame: u64 = 0;
     let mut session_started = false;
+    let mut completed_at: Option<Instant> = None;
 
     loop {
         let input_changed = process_keypresses(rx.as_ref(), &mut engine, muted);
@@ -103,8 +105,15 @@ fn run(
         let state_changed = engine.state() != last_state;
         let phase_changed = engine.phase_marker() != last_phase;
         let second_changed = current_second != last_displayed_second;
-        let need_redraw =
-            input_changed || state_changed || phase_changed || second_changed || frame == 0;
+        // Force redraw every tick when < 10 s so sub-second tenths animate.
+        let near_end = engine.remaining().is_some_and(|r| r.as_secs() < 10)
+            && engine.state() == engine::EngineState::Running;
+        let need_redraw = input_changed
+            || state_changed
+            || phase_changed
+            || second_changed
+            || frame == 0
+            || near_end;
 
         if need_redraw {
             let state = build_render_state(&engine, &colors, view, frame);
@@ -118,7 +127,33 @@ fn run(
         handle_events(&mut engine, muted);
 
         frame += 1;
-        std::thread::sleep(sleep_duration(&engine));
+
+        // Track completion time for auto-exit and burst animation.
+        if engine.state() == engine::EngineState::Completed {
+            match completed_at {
+                None => completed_at = Some(Instant::now()),
+                Some(t) if t.elapsed() >= Duration::from_secs(5) => {
+                    std::process::exit(0);
+                }
+                Some(_) => {}
+            }
+        } else {
+            completed_at = None;
+        }
+
+        // Completion burst: fast tick for 2 s so the animation is visible.
+        let sleep = match engine.state() {
+            engine::EngineState::Completed => {
+                let since = completed_at.map(|t| t.elapsed()).unwrap_or(Duration::ZERO);
+                if since < Duration::from_secs(2) {
+                    Duration::from_millis(80)
+                } else {
+                    Duration::from_millis(1000)
+                }
+            }
+            _ => sleep_duration(&engine),
+        };
+        std::thread::sleep(sleep);
     }
 }
 
@@ -147,12 +182,20 @@ fn process_keypresses(
                     changed = true;
                 }
 
-                // ESC or ESC-sequence
-                27 => match rx.try_recv() {
-                    Ok(next) if next == b'[' || next == b'O' => while rx.try_recv().is_ok() {},
-                    Ok(_) | Err(mpsc::TryRecvError::Empty) => std::process::exit(0),
-                    Err(mpsc::TryRecvError::Disconnected) => std::process::exit(0),
-                },
+                // ESC — debounce: wait briefly for ESC [ / ESC O sequences
+                // to avoid mistaking the start of an arrow-key press for bare ESC.
+                27 => {
+                    match rx.recv_timeout(Duration::from_millis(30)) {
+                        Ok(b'[') | Ok(b'O') => {
+                            // Recognized escape sequence — drain remaining bytes.
+                            while rx.try_recv().is_ok() {}
+                        }
+                        Ok(_) | Err(_) => {
+                            // Bare ESC (timeout) or unknown sequence — quit.
+                            std::process::exit(0);
+                        }
+                    }
+                }
 
                 _ => {}
             }

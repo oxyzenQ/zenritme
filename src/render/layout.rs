@@ -41,7 +41,9 @@ fn terminal_size_linux_ioctl() -> Option<(usize, usize)> {
     }
 
     extern "C" {
-        fn ioctl(fd: i32, request: u64, ...) -> i32;
+        // Variadic FFI (`...`) is UB in Rust — declare the exact signature
+        // used at this call site: ioctl(fd, TIOCGWINSZ, &mut Winsize).
+        fn ioctl(fd: i32, request: u64, arg: *mut Winsize) -> i32;
     }
 
     const TIOCGWINSZ: u64 = 0x5413;

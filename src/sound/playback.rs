@@ -15,13 +15,25 @@ use std::process::{Command, Stdio};
 
 /// Tries to play a WAV file via `pw-play` (PipeWire / PulseAudio compat).
 /// Returns `true` if the process spawned successfully.
+/// In debug builds, logs the failure reason to stderr for diagnostics.
 pub(crate) fn play_file_via_pw(path: &std::path::Path) -> bool {
-    Command::new("pw-play")
+    match Command::new("pw-play")
         .arg(path)
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
-        .is_ok()
+    {
+        Ok(_) => true,
+        Err(e) => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "[zenritme:debug] pw-play spawn failed for {}: {}",
+                path.display(),
+                e
+            );
+            false
+        }
+    }
 }
 
 /// Plays a terminal bell character (`\x07`).

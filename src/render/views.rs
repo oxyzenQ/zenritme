@@ -15,6 +15,7 @@ use super::RenderState;
 pub(crate) fn draw_minimal(state: &RenderState) -> String {
     let c = state.colors;
     let r = c.reset;
+    let bar_w = (layout::terminal_size().0 / 3).clamp(10, 50);
 
     let mut lines: Vec<String> = vec![
         super::colored(&labels::build_title(state), c.title, r),
@@ -25,7 +26,7 @@ pub(crate) fn draw_minimal(state: &RenderState) -> String {
 
     // Progress bar
     if let Some(p) = state.progress {
-        lines.push(colored_bar(p, 20, c));
+        lines.push(colored_bar(p, bar_w, c));
         lines.push(String::new());
     }
 
@@ -35,6 +36,9 @@ pub(crate) fn draw_minimal(state: &RenderState) -> String {
     // State label
     labels::push_state_label(&mut lines, state, c, r);
 
+    // Control hints
+    labels::push_control_hints(&mut lines, state, c, r);
+
     layout::layout_box(&lines, c)
 }
 
@@ -43,6 +47,7 @@ pub(crate) fn draw_minimal(state: &RenderState) -> String {
 pub(crate) fn draw_orbit(state: &RenderState) -> String {
     let c = state.colors;
     let r = c.reset;
+    let bar_w = (layout::terminal_size().0 / 3).clamp(10, 50);
 
     let mut lines: Vec<String> = Vec::new();
 
@@ -62,7 +67,7 @@ pub(crate) fn draw_orbit(state: &RenderState) -> String {
 
     // Progress bar
     if let Some(p) = state.progress {
-        lines.push(colored_bar(p, 20, c));
+        lines.push(colored_bar(p, bar_w, c));
     }
 
     // Mode-specific info
@@ -70,6 +75,9 @@ pub(crate) fn draw_orbit(state: &RenderState) -> String {
 
     // State label
     labels::push_state_label(&mut lines, state, c, r);
+
+    // Control hints
+    labels::push_control_hints(&mut lines, state, c, r);
 
     layout::layout_box(&lines, c)
 }
@@ -79,6 +87,7 @@ pub(crate) fn draw_orbit(state: &RenderState) -> String {
 pub(crate) fn draw_cinematic(state: &RenderState) -> String {
     let c = state.colors;
     let r = c.reset;
+    let bar_w = (layout::terminal_size().0 / 3).clamp(10, 50);
 
     let mut lines: Vec<String> = vec![
         super::colored(&animation::orbit(state.frame), c.spinner, r),
@@ -91,9 +100,9 @@ pub(crate) fn draw_cinematic(state: &RenderState) -> String {
         String::new(),
     ];
 
-    // Progress bar (wider)
+    // Progress bar (dynamic width)
     if let Some(p) = state.progress {
-        lines.push(colored_bar(p, 24, c));
+        lines.push(colored_bar(p, bar_w, c));
         lines.push(String::new());
     }
 
@@ -108,6 +117,9 @@ pub(crate) fn draw_cinematic(state: &RenderState) -> String {
 
     // State label
     labels::push_state_label(&mut lines, state, c, r);
+
+    // Control hints
+    labels::push_control_hints(&mut lines, state, c, r);
 
     layout::layout_box(&lines, c)
 }

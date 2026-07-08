@@ -58,7 +58,23 @@ pub(crate) fn build_time(state: &super::RenderState) -> String {
         Mode::TimerDown { .. } | Mode::Pomodoro { .. } => state.remaining.unwrap_or_default(),
         _ => state.elapsed,
     };
-    format_hms(primary)
+    let secs = primary.as_secs();
+    let h = secs / 3600;
+    let m = (secs % 3600) / 60;
+    let s = secs % 60;
+
+    if h > 0 {
+        format!("{:02}:{:02}:{:02}", h, m, s)
+    } else if state.state == EngineState::Running
+        && matches!(state.mode, Mode::TimerDown { .. } | Mode::Pomodoro { .. })
+        && secs < 10
+    {
+        // Sub-second display when < 10 s and counting down.
+        let tenths = primary.subsec_millis() / 100;
+        format!("{:02}:{:02}.{}", m, s, tenths)
+    } else {
+        format!("{:02}:{:02}", m, s)
+    }
 }
 
 // ─── Mode info line ──────────────────────────────────────────────────────────
@@ -95,6 +111,24 @@ pub(crate) fn push_state_label(
         }
         EngineState::Running => {}
     }
+}
+
+// ─── Control hints ──────────────────────────────────────────────────────────
+
+/// Keybinding hints displayed at the bottom of every view.
+pub(crate) fn push_control_hints(
+    lines: &mut Vec<String>,
+    state: &super::RenderState,
+    c: &ColorFields,
+    r: &str,
+) {
+    let hint = match state.state {
+        EngineState::Running => "[p] pause  [r] reset  [q] quit",
+        EngineState::Paused => "[p] resume  [r] reset  [q] quit",
+        EngineState::Completed => "[r] restart  [q] quit",
+    };
+    lines.push(String::new());
+    lines.push(colored(hint, c.dim, r));
 }
 
 // ─── Pomodoro emoji ──────────────────────────────────────────────────────────

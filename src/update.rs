@@ -289,13 +289,16 @@ pub fn check_update(current_version: &str) -> Result<(), String> {
         return Err(interpret_curl_exit(code).to_string());
     }
 
-    // Split response: body is everything before the final newline,
-    // HTTP status code is the last line.
-    let raw = String::from_utf8_lossy(&output.stdout);
-    let mut lines: Vec<&str> = raw.rsplitn(2, '\n').collect();
-    lines.reverse(); // [body, status_code]
+    // Parse response as UTF-8 (single pass — avoids redundant second parse).
+    let body_owned =
+        String::from_utf8(output.stdout).map_err(|_| "response was not valid UTF-8".to_string())?;
 
-    let http_code: u16 = lines
+    // Split: body is everything before the final newline,
+    // HTTP status code is the last line (appended by --write-out).
+    let mut parts: Vec<&str> = body_owned.rsplitn(2, '\n').collect();
+    parts.reverse(); // [body, status_code]
+
+    let http_code: u16 = parts
         .get(1)
         .and_then(|s| s.trim().parse::<u16>().ok())
         .unwrap_or(0);
@@ -305,16 +308,7 @@ pub fn check_update(current_version: &str) -> Result<(), String> {
         return Err(interpret_http_status(http_code).to_string());
     }
 
-    let body_owned =
-        String::from_utf8(output.stdout).map_err(|_| "response was not valid UTF-8".to_string())?;
-    // Re-extract body (before the trailing status line).
-    let body_trimmed = if let Some(pos) = body_owned.rfind('\n') {
-        &body_owned[..pos]
-    } else {
-        &body_owned
-    };
-
-    let latest_tag = extract_tag_name(body_trimmed)
+    let latest_tag = extract_tag_name(parts[0])
         .ok_or_else(|| "could not parse latest release tag from GitHub response".to_string())?;
 
     let info = compare_versions(current_version, &latest_tag);
