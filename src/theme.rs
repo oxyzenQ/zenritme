@@ -10,6 +10,7 @@ pub enum Theme {
     Ember,
     Aura,
     Forest,
+    Tron,
     Mono,
 }
 
@@ -21,6 +22,7 @@ impl Theme {
             "ember" => Some(Self::Ember),
             "aura" => Some(Self::Aura),
             "forest" => Some(Self::Forest),
+            "tron" => Some(Self::Tron),
             "mono" => Some(Self::Mono),
             _ => None,
         }
@@ -33,6 +35,7 @@ impl Theme {
             Self::Ember => ColorFields::ember(),
             Self::Aura => ColorFields::aura(),
             Self::Forest => ColorFields::forest(),
+            Self::Tron => ColorFields::tron(),
             Self::Mono => ColorFields::plain(),
         }
     }
@@ -140,6 +143,21 @@ impl ColorFields {
             reset: RESET,
         }
     }
+
+    fn tron() -> Self {
+        Self {
+            title: "\x1b[1;38;5;171m",
+            time: "\x1b[1;38;5;213m",
+            progress_fill: "\x1b[38;5;165m",
+            progress_empty: "\x1b[38;5;53m",
+            label: "\x1b[38;5;93m",
+            dim: "\x1b[38;5;53m",
+            border: "\x1b[38;5;93m",
+            accent: "\x1b[38;5;219m",
+            spinner: "\x1b[38;5;213m",
+            reset: RESET,
+        }
+    }
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -154,6 +172,7 @@ mod tests {
         assert_eq!(Theme::from_name("EMBER"), Some(Theme::Ember));
         assert_eq!(Theme::from_name("Aura"), Some(Theme::Aura));
         assert_eq!(Theme::from_name("forest"), Some(Theme::Forest));
+        assert_eq!(Theme::from_name("tron"), Some(Theme::Tron));
         assert_eq!(Theme::from_name("mono"), Some(Theme::Mono));
     }
 
@@ -161,6 +180,16 @@ mod tests {
     fn parse_unknown_theme() {
         assert_eq!(Theme::from_name("neon"), None);
         assert_eq!(Theme::from_name(""), None);
+    }
+
+    #[test]
+    fn tron_theme_has_codes() {
+        let c = Theme::Tron.palette();
+        assert!(!c.title.is_empty());
+        assert!(!c.time.is_empty());
+        assert!(!c.progress_fill.is_empty());
+        assert!(!c.accent.is_empty());
+        assert!(!c.reset.is_empty());
     }
 
     #[test]
@@ -186,7 +215,13 @@ mod tests {
 
     #[test]
     fn all_themes_produce_non_empty_border_when_colored() {
-        for theme in [Theme::Void, Theme::Ember, Theme::Aura, Theme::Forest] {
+        for theme in [
+            Theme::Void,
+            Theme::Ember,
+            Theme::Aura,
+            Theme::Forest,
+            Theme::Tron,
+        ] {
             let c = theme.palette();
             assert!(
                 !c.border.is_empty(),
