@@ -5,15 +5,20 @@
 
 mod duration;
 mod pomodoro;
+mod suggest;
 
 use crate::mode::Mode;
 use crate::render::ViewMode;
 use crate::theme::Theme;
+use std::sync::OnceLock;
 
+#[derive(Debug)]
 pub enum Command {
     Help,
     Version,
     CheckUpdate,
+    ListThemes,
+    ListViews,
     Run {
         mode: Mode,
         theme: Theme,
@@ -33,7 +38,12 @@ struct PomodoroOpts {
     cycles: Option<u32>,
 }
 
-pub fn usage() -> String {
+pub fn usage() -> &'static str {
+    static USAGE: OnceLock<String> = OnceLock::new();
+    USAGE.get_or_init(build_usage).as_str()
+}
+
+fn build_usage() -> String {
     format!(
         "zenritme v{ver}\n\n\
          Usage:\n\
@@ -44,6 +54,8 @@ pub fn usage() -> String {
          \x20 zenritme --sound-test\n\
          \x20 zenritme --check-update\n\
          \x20 zenritme --check-updated\n\
+         \x20 zenritme --list-themes\n\
+         \x20 zenritme --list-views\n\
          \x20 zenritme --help\n\
          \x20 zenritme -V, --version\n\n\
          Options:\n\
@@ -73,10 +85,82 @@ pub fn usage() -> String {
          \x20 ZENRITME_SOUND_PHASE     override phase sound file\n\
          \x20 ZENRITME_SOUND_COMPLETE  override complete sound file\n\
          \x20 ZENRITME_SOUND_FILE      global fallback for all events\n\
-         \x20 ZENRITME_VISUAL_BELL=1   enable visual bell (screen flash)",
+         \x20 ZENRITME_VISUAL_BELL=1   enable visual bell (screen flash)\n\n\
+         Sound file paths are validated against a strict security policy\n\
+         \x20 (only ~, ., ~/.config/zenritme/, ~/.local/share/zenritme/).\n\
+         \x20 See --help security notes or docs/SECURITY.md.",
         ver = env!("CARGO_PKG_VERSION")
     )
 }
+
+/// Render the `--list-themes` output as a formatted table.
+pub fn list_themes() -> String {
+    let rows: &[(&str, &str)] = &[
+        ("void", "Minimal dark"),
+        ("ember", "Warm red/orange"),
+        ("aura", "Purple/magenta"),
+        ("forest", "Green tones"),
+        ("tron", "Classic Tron blue/purple"),
+        ("tron-green", "Tron Legacy green circuit"),
+        ("tron-cyan", "Tron Legacy cyan glow"),
+        ("tron-orange", "Tron Legacy orange flare"),
+        ("tron-red", "Tron Legacy red alert"),
+        ("tron-yellow", "Tron Legacy gold accent"),
+        ("mono", "Monochrome/gray"),
+    ];
+    format_table("Available themes (--theme <THEME>):", rows)
+}
+
+/// Render the `--list-views` output as a formatted table.
+pub fn list_views() -> String {
+    let rows: &[(&str, &str)] = &[
+        ("minimal", "Compact single-line display"),
+        ("orbit", "Circular progress indicator (default)"),
+        ("cinematic", "Full-width centered box layout"),
+    ];
+    format_table("Available views (--view <VIEW>):", rows)
+}
+
+/// Format a `(name, description)` table with aligned columns.
+fn format_table(header: &str, rows: &[(&str, &str)]) -> String {
+    let max_name = rows.iter().map(|(n, _)| n.len()).max().unwrap_or(0);
+    let mut out = String::new();
+    out.push_str(header);
+    out.push_str("\n\n");
+    for (name, desc) in rows {
+        out.push_str(&format!("  {:<width$}  {}\n", name, desc, width = max_name));
+    }
+    out
+}
+
+/// Build a "did you mean ...?" hint for an unknown theme/view value.
+fn hint_unknown(label: &str, input: &str, candidates: &[&str]) -> String {
+    match suggest::closest(input, candidates) {
+        Some(better) => format!(
+            "unknown {}: {}  (did you mean '{}'?  see --help)",
+            label, input, better
+        ),
+        None => format!("unknown {}: {}  (see --help)", label, input),
+    }
+}
+
+/// All valid theme names, for did-you-mean suggestions.
+const THEME_NAMES: &[&str] = &[
+    "void",
+    "ember",
+    "aura",
+    "forest",
+    "tron",
+    "tron-green",
+    "tron-cyan",
+    "tron-orange",
+    "tron-red",
+    "tron-yellow",
+    "mono",
+];
+
+/// All valid view names, for did-you-mean suggestions.
+const VIEW_NAMES: &[&str] = &["minimal", "orbit", "cinematic"];
 
 /// Parse all arguments. `--theme`, `--view`, and pomodoro-specific flags are
 /// extracted in a pre-pass so they may appear before or after the mode flag.
@@ -100,8 +184,8 @@ where
                 let val = all
                     .get(i + 1)
                     .ok_or("missing value after --theme".to_string())?;
-                theme = Theme::from_name(val)
-                    .ok_or_else(|| format!("unknown theme: {}  (see --help)", val))?;
+                theme =
+                    Theme::from_name(val).ok_or_else(|| hint_unknown("theme", val, THEME_NAMES))?;
                 i += 2;
             }
             "--view" => {
@@ -109,7 +193,7 @@ where
                     .get(i + 1)
                     .ok_or("missing value after --view".to_string())?;
                 view = ViewMode::from_name(val)
-                    .ok_or_else(|| format!("unknown view: {}  (see --help)", val))?;
+                    .ok_or_else(|| hint_unknown("view", val, VIEW_NAMES))?;
                 i += 2;
             }
             "--mute" => {
@@ -173,6 +257,16 @@ where
         "--check-update" | "--check-updated" => {
             reject_extra(&mut args, "--check-update")?;
             Ok(Command::CheckUpdate)
+        }
+
+        "--list-themes" => {
+            reject_extra(&mut args, "--list-themes")?;
+            Ok(Command::ListThemes)
+        }
+
+        "--list-views" => {
+            reject_extra(&mut args, "--list-views")?;
+            Ok(Command::ListViews)
         }
 
         "--sound-test" => {
@@ -646,5 +740,126 @@ mod tests {
         } else {
             panic!("expected Run");
         }
+    }
+
+    // ── --list-themes / --list-views ────────────────────────────────────────
+
+    #[test]
+    fn list_themes_parsed() {
+        assert!(matches!(
+            parse_args(args(&["--list-themes"])),
+            Ok(Command::ListThemes)
+        ));
+    }
+
+    #[test]
+    fn list_views_parsed() {
+        assert!(matches!(
+            parse_args(args(&["--list-views"])),
+            Ok(Command::ListViews)
+        ));
+    }
+
+    #[test]
+    fn list_themes_rejects_extra_args() {
+        assert!(parse_args(args(&["--list-themes", "extra"])).is_err());
+    }
+
+    #[test]
+    fn list_views_rejects_extra_args() {
+        assert!(parse_args(args(&["--list-views", "extra"])).is_err());
+    }
+
+    #[test]
+    fn list_themes_output_contains_all_themes() {
+        let out = list_themes();
+        for name in THEME_NAMES {
+            assert!(out.contains(name), "list_themes missing: {}", name);
+        }
+    }
+
+    #[test]
+    fn list_views_output_contains_all_views() {
+        let out = list_views();
+        for name in VIEW_NAMES {
+            assert!(out.contains(name), "list_views missing: {}", name);
+        }
+    }
+
+    #[test]
+    fn list_themes_output_has_header() {
+        let out = list_themes();
+        assert!(out.contains("Available themes"), "missing header: {}", out);
+    }
+
+    #[test]
+    fn list_views_output_has_header() {
+        let out = list_views();
+        assert!(out.contains("Available views"), "missing header: {}", out);
+    }
+
+    // ── Did-you-mean suggestions ────────────────────────────────────────────
+
+    #[test]
+    fn unknown_theme_suggests_close_match() {
+        let err = parse_args(args(&["--theme", "embar", "--timer-up"])).unwrap_err();
+        assert!(
+            err.contains("did you mean 'ember'"),
+            "expected did-you-mean hint, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn unknown_view_suggests_close_match() {
+        let err = parse_args(args(&["--view", "orbir", "--timer-up"])).unwrap_err();
+        assert!(
+            err.contains("did you mean 'orbit'"),
+            "expected did-you-mean hint, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn unknown_theme_no_suggestion_when_too_far() {
+        let err = parse_args(args(&["--theme", "zzzzzzz", "--timer-up"])).unwrap_err();
+        assert!(
+            !err.contains("did you mean"),
+            "should not suggest for very different input, got: {}",
+            err
+        );
+        assert!(err.contains("unknown theme"), "should still report unknown");
+    }
+
+    // ── usage() memoization ─────────────────────────────────────────────────
+
+    #[test]
+    fn usage_returns_static_str() {
+        let s1: &'static str = usage();
+        let s2: &'static str = usage();
+        // Same pointer — memoized via OnceLock.
+        assert!(std::ptr::eq(s1, s2), "usage() should be memoized");
+    }
+
+    #[test]
+    fn usage_lists_list_themes_and_list_views() {
+        let s = usage();
+        assert!(
+            s.contains("--list-themes"),
+            "usage should mention --list-themes"
+        );
+        assert!(
+            s.contains("--list-views"),
+            "usage should mention --list-views"
+        );
+    }
+
+    #[test]
+    fn usage_mentions_security_policy() {
+        let s = usage();
+        assert!(
+            s.contains("security policy") || s.contains("validated"),
+            "usage should mention path security policy"
+        );
     }
 }

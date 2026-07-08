@@ -7,6 +7,7 @@ mod animation;
 mod cli;
 mod engine;
 mod mode;
+mod path_guard;
 mod render;
 mod sound;
 mod terminal;
@@ -86,6 +87,12 @@ fn main() {
         }
         cli::Command::Version => {
             println!("{}", version::version_report());
+        }
+        cli::Command::ListThemes => {
+            println!("{}", cli::list_themes());
+        }
+        cli::Command::ListViews => {
+            println!("{}", cli::list_views());
         }
         cli::Command::CheckUpdate => match update::check_update(env!("CARGO_PKG_VERSION")) {
             Ok(()) => {}

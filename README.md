@@ -34,6 +34,8 @@ zenritme --pomodoro [FOCUS BREAK]
 zenritme --sound-test
 zenritme --check-update
 zenritme --check-updated
+zenritme --list-themes
+zenritme --list-views
 zenritme --help
 zenritme -V, --version
 ```
@@ -281,6 +283,31 @@ needed.
 - **Zero external dependencies** — the project uses only the Rust standard library.
 - **LOC guard** — all core code files must stay under 1000 lines. Enforced by `scripts/check-loc.sh`.
 - **Procedural assets** — built-in sounds are generated from code, not downloaded.
+
+## Path security
+
+Zenritme never reads sensitive system files. All user-provided filesystem
+paths (currently the `ZENRITME_SOUND_*` environment variables) are validated
+through a strict allowlist + denylist policy before use.
+
+**Allowed roots** (recursive):
+
+- Home directory (`~`)
+- Current working directory (`.`)
+- `~/.config/zenritme/`
+- `~/.local/share/zenritme/`
+
+**Denied locations** (always rejected, even inside an allowed root):
+
+- `~/.ssh/`, `~/.gnupg/`, `~/.aws/`, `~/.docker/`, `~/.kube/`
+- `~/.config/systemd/`, `~/.local/share/keyrings/`
+- `/etc/shadow`, `/etc/gshadow`, `/etc/ssh/`
+- `/proc/`, `/sys/`, `/root/` (unless running as root)
+
+Symlinks are resolved via `canonicalize()` before the policy check, so a
+symlink inside an allowed root that points to a denied location is rejected.
+Paths that fail validation trigger a stderr warning and fall back to the
+built-in embedded sound.
 
 ## License
 

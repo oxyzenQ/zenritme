@@ -31,6 +31,7 @@ pub(crate) fn play_file_via_pw(path: &std::path::Path) -> bool {
                 path.display(),
                 e
             );
+            let _ = e;
             false
         }
     }
