@@ -64,17 +64,6 @@ Duration format: `30s`, `10m`, `1h`
 | `orbit` | Circular progress indicator |
 | `cinematic` | Full-width centered box layout |
 
-### Version output
-
-```sh
-$ zenritme -V
-Version: v11.0.0
-Build: linux-amd64 (1e84ccb)
-Copyright: (c) 2026 rezky_nightky (oxyzenQ)
-License: GPL-3.0-only
-Source: https://github.com/oxyzenQ/zenritme
-```
-
 ### Check for updates
 
 `zenritme --check-update` queries the GitHub releases API and reports whether
@@ -85,9 +74,9 @@ binaries.
 ```sh
 $ zenritme --check-update
 zenritme update check
-Current: v11.0.0
-Latest:  v11.0.0
-Status:  up to date
+Current: <installed-version>
+Latest:  <latest-released-version>
+Status:  up to date | update available
 Source:  https://github.com/oxyzenQ/zenritme/releases/latest
 ```
 
@@ -217,8 +206,8 @@ panics, Ctrl+C, and normal exit paths.
 ### From release tarball
 
 ```sh
-tar xzf zenritme-vVERSION-linux-amd64-gnu.tar.gz
-cd zenritme-vVERSION-linux-amd64-gnu
+tar xzf zenritme-<release-tag>-linux-amd64-gnu.tar.gz
+cd zenritme-<release-tag>-linux-amd64-gnu
 ./scripts/install.sh --system    # installs to /usr/bin/zenritme (sudo for install step)
 # or: ./scripts/install.sh --user  # installs to ~/.local/bin/zenritme (no sudo)
 ```
@@ -257,15 +246,15 @@ BLAKE2b-512 + SHAKE256. Full instructions in
 
 ```bash
 # Classical (universal)
-sha512sum -c zenritme-vX.Y.Z-linux-amd64-gnu.tar.gz.sha512sum
+sha512sum -c zenritme-<release-tag>-linux-amd64-gnu.tar.gz.sha512sum
 
 # Quantum-resistant — BLAKE2b (fastest, in coreutils)
-b2sum -c zenritme-vX.Y.Z-linux-amd64-gnu.tar.gz.b2sum
+b2sum -c zenritme-<release-tag>-linux-amd64-gnu.tar.gz.b2sum
 
 # Quantum-resistant — SHAKE256 (NIST PQ standard, via Python)
 # openssl's -shake256 default output length varies; Python is consistent
-COMPUTED=$(python3 -c "import hashlib; print(hashlib.shake_256(open('zenritme-vX.Y.Z-linux-amd64-gnu.tar.gz','rb').read()).hexdigest(64))")
-EXPECTED=$(awk '{print $1}' zenritme-vX.Y.Z-linux-amd64-gnu.tar.gz.shake256)
+COMPUTED=$(python3 -c "import hashlib; print(hashlib.shake_256(open('zenritme-<release-tag>-linux-amd64-gnu.tar.gz','rb').read()).hexdigest(64))")
+EXPECTED=$(awk '{print $1}' zenritme-<release-tag>-linux-amd64-gnu.tar.gz.shake256)
 [ "$COMPUTED" = "$EXPECTED" ] && echo "OK" || echo "FAILED"
 ```
 
@@ -281,7 +270,7 @@ needed.
 - [docs/RULES.md](docs/RULES.md) — project rules, LOC guard, generated assets policy
 - [docs/SECURITY.md](docs/SECURITY.md) — security policy and supply-chain minimization
 - [docs/ENDURANCE.md](docs/ENDURANCE.md) — endurance testing and smoke test
-- [docs/LONG_USAGE_REPORT.md](docs/LONG_USAGE_REPORT.md) — v4.0.2 long-usage validation
+- [docs/LONG_USAGE_REPORT.md](docs/LONG_USAGE_REPORT.md) — long-usage validation report
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — pre-release checklist
 - [assets/sounds/README.md](assets/sounds/README.md) — built-in sound documentation
 - [scripts/doctor.sh](scripts/doctor.sh) — local binary health check
