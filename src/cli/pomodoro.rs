@@ -209,28 +209,6 @@ mod tests {
         assert_eq!(long_break, std::time::Duration::from_secs(15 * 60));
         assert_eq!(cycles, 4);
     }
-
-    #[test]
-    fn pomodoro_break_flag() {
-        let cmd = parse_args(args(&["--pomodoro", "--break", "10m"])).unwrap();
-        let (_focus, short_break, _long_break, _cycles) = pomodoro_fields(cmd);
-        assert_eq!(short_break, std::time::Duration::from_secs(10 * 60));
-    }
-
-    #[test]
-    fn pomodoro_long_break_flag() {
-        let cmd = parse_args(args(&["--pomodoro", "--long-break", "20m"])).unwrap();
-        let (_focus, _short_break, long_break, _cycles) = pomodoro_fields(cmd);
-        assert_eq!(long_break, std::time::Duration::from_secs(20 * 60));
-    }
-
-    #[test]
-    fn pomodoro_cycles_flag() {
-        let cmd = parse_args(args(&["--pomodoro", "--cycles", "3"])).unwrap();
-        let (_focus, _short_break, _long_break, cycles) = pomodoro_fields(cmd);
-        assert_eq!(cycles, 3);
-    }
-
     #[test]
     fn pomodoro_all_flags_combined() {
         let cmd = parse_args(args(&[
@@ -336,17 +314,6 @@ mod tests {
     fn pomodoro_missing_focus_value() {
         assert!(parse_args(args(&["--pomodoro", "--focus"])).is_err());
     }
-
-    #[test]
-    fn pomodoro_missing_break_value() {
-        assert!(parse_args(args(&["--pomodoro", "--break"])).is_err());
-    }
-
-    #[test]
-    fn pomodoro_missing_long_break_value() {
-        assert!(parse_args(args(&["--pomodoro", "--long-break"])).is_err());
-    }
-
     #[test]
     fn pomodoro_missing_cycles_value() {
         assert!(parse_args(args(&["--pomodoro", "--cycles"])).is_err());
@@ -435,16 +402,4 @@ mod tests {
         let consumed = super::extract_flag(&all, &mut i, &mut opts).unwrap();
         assert!(!consumed);
         assert_eq!(i, 0); // not advanced
-    }
-
-    #[test]
-    fn extract_flag_cycles_consumed() {
-        let all: Vec<String> = ["--cycles", "6"].iter().map(|s| s.to_string()).collect();
-        let mut opts = super::super::PomodoroOpts::default();
-        let mut i = 0;
-        let consumed = super::extract_flag(&all, &mut i, &mut opts).unwrap();
-        assert!(consumed);
-        assert_eq!(i, 2);
-        assert_eq!(opts.cycles, Some(6));
-    }
-}
+    }}

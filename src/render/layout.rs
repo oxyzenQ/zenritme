@@ -285,12 +285,6 @@ mod tests {
         assert_eq!(display_width("hello"), 5);
         assert_eq!(display_width("hello world"), 11);
     }
-
-    #[test]
-    fn display_width_empty() {
-        assert_eq!(display_width(""), 0);
-    }
-
     #[test]
     fn display_width_ignores_ansi() {
         let colored_text = "\x1b[32mgreen\x1b[0m";
@@ -302,24 +296,11 @@ mod tests {
         // 'A' = 1, '中' = 2
         assert_eq!(display_width("A中"), 3);
     }
-
-    #[test]
-    fn display_width_emoji() {
-        // Each emoji is 2 columns wide in terminal
-        assert_eq!(display_width("AB"), 2);
-    }
-
     #[test]
     fn strip_ansi_removes_csi() {
         let input = "\x1b[32mgreen\x1b[0m text";
         assert_eq!(strip_ansi(input), "green text");
     }
-
-    #[test]
-    fn strip_ansi_plain_unchanged() {
-        assert_eq!(strip_ansi("no codes here"), "no codes here");
-    }
-
     #[test]
     fn terminal_size_has_minimum() {
         let (c, r) = terminal_size();
@@ -337,14 +318,6 @@ mod tests {
             assert!(display_width(w) <= 10);
         }
     }
-
-    #[test]
-    fn wrap_lines_empty_input() {
-        let lines: Vec<String> = vec![];
-        let wrapped = wrap_lines(&lines, 40);
-        assert!(wrapped.is_empty());
-    }
-
     #[test]
     fn wrap_lines_preserves_blank_lines() {
         let lines = vec![String::new(), "hi".to_string(), String::new()];

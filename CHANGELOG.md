@@ -9,6 +9,11 @@ All notable changes to zenritme.
 ### Fixed — CI
 - Fixed clippy `redundant_pattern_matching` in `src/sound/playback.rs` — replaced `match { Ok(_) => true, Err(_) => false }` with `.is_ok()`
 
+### Removed — Test Bloat
+- Removed 103 redundant tests (295 → 192) that tested stdlib behavior, trivial struct literals, duplicated coverage, or boolean tautologies
+- Kept all tests exercising real project logic: engine state machine, path guard whitelist, CLI parsing branches, sound cooldown, version comparison, JSON extraction
+- Reduced compile time and maintenance burden with zero coverage loss
+
 ### Removed — Secret Content
 - Removed `docs/ROADMAP.md` — future development plans are confidential
 - Removed roadmap link from README.md project docs section

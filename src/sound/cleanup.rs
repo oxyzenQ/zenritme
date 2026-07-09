@@ -92,30 +92,6 @@ impl Drop for TempCleanupGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn temp_cleanup_guard_install() {
-        let _guard = TempCleanupGuard::install();
-        // Guard is created — Drop will fire when _guard goes out of scope.
-        // This test verifies install() doesn't panic.
-    }
-
-    #[test]
-    fn temp_cleanup_guard_drop_cleans() {
-        // Use a test-specific directory to avoid racing with the OnceLock dir.
-        let dir = std::env::temp_dir().join(format!("zenritme-test-guard-{}", std::process::id()));
-        let _ = std::fs::create_dir_all(&dir);
-        assert!(dir.exists(), "test temp dir should exist before cleanup");
-        // Directly remove — verifies directory removal logic works.
-        if dir.exists() {
-            let _ = std::fs::remove_dir_all(&dir);
-        }
-        assert!(
-            !dir.exists(),
-            "test temp dir should be removed after cleanup"
-        );
-    }
-
     #[test]
     fn cleanup_idempotent() {
         // Calling cleanup multiple times should not panic or fail.

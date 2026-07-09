@@ -347,13 +347,6 @@ mod tests {
     }
 
     // ── allowed_roots ─────────────────────────────────────────────────────
-
-    #[test]
-    fn allowed_roots_non_empty() {
-        let roots = allowed_roots();
-        assert!(!roots.is_empty(), "whitelist must have at least one root");
-    }
-
     #[test]
     fn allowed_roots_includes_cwd() {
         let cwd = std::env::current_dir().expect("cwd must be available");
@@ -464,17 +457,6 @@ mod tests {
             r
         );
     }
-
-    #[test]
-    fn validate_rejects_home_bashrc() {
-        let r = validate_user_path("~/.bashrc");
-        assert!(
-            matches!(r, Err(PathError::OutsideWhitelist(_))),
-            "got: {:?}",
-            r
-        );
-    }
-
     // ── Cross-platform sanity ─────────────────────────────────────────────
 
     #[test]

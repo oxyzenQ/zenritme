@@ -282,28 +282,12 @@ mod tests {
         assert!(!c.accent.is_empty());
         assert!(!c.reset.is_empty());
     }
-
-    #[test]
-    fn void_theme_has_codes() {
-        let c = Theme::Void.palette();
-        assert!(!c.title.is_empty());
-        assert!(!c.time.is_empty());
-        assert!(!c.reset.is_empty());
-    }
-
     #[test]
     fn mono_theme_is_plain() {
         let c = Theme::Mono.colors();
         assert!(c.title.is_empty());
         assert!(c.reset.is_empty());
     }
-
-    #[test]
-    fn plain_has_empty_reset() {
-        let c = ColorFields::plain();
-        assert!(c.reset.is_empty());
-    }
-
     #[test]
     fn all_themes_produce_non_empty_border_when_colored() {
         for theme in [

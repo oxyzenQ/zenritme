@@ -107,13 +107,4 @@ mod tests {
         assert!(bar.contains(" 50%"));
         assert!(!bar.contains('\u{2588}'));
         assert!(!bar.contains('\u{2591}'));
-    }
-
-    #[test]
-    fn colored_bar_narrow_width() {
-        let c = ColorFields::plain();
-        let bar = colored_bar(0.3, 4, &c);
-        // 0.3 * 4 = 1.2, rounds to 1 filled
-        assert!(bar.contains(" 30%"));
-    }
-}
+    }}

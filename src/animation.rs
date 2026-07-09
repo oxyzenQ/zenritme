@@ -93,25 +93,9 @@ mod tests {
         let b = orbit(28); // 28 / 2 = 14 = full cycle
         assert_eq!(a, b);
     }
-
-    #[test]
-    fn orbit_length_is_consistent() {
-        let a = orbit(0);
-        let b = orbit(7);
-        assert_eq!(a.chars().count(), b.chars().count());
-    }
-
     #[test]
     fn completion_burst_cycles() {
         let a = completion_burst(0);
         let b = completion_burst(24); // 24 / 3 = 8 = full cycle
         assert_eq!(a, b);
-    }
-
-    #[test]
-    fn completion_burst_all_non_empty() {
-        for f in 0..24 {
-            assert!(!completion_burst(f).is_empty());
-        }
-    }
-}
+    }}

@@ -82,27 +82,6 @@ mod tests {
     use super::*;
     use crate::sound::assets::all_events;
     use crate::sound::SoundEvent;
-
-    #[test]
-    fn cooldown_start_is_zero() {
-        assert_eq!(cooldown_ms(SoundEvent::Start), 0);
-    }
-
-    #[test]
-    fn cooldown_pause_is_500ms() {
-        assert_eq!(cooldown_ms(SoundEvent::Pause), 500);
-    }
-
-    #[test]
-    fn cooldown_phase_is_1000ms() {
-        assert_eq!(cooldown_ms(SoundEvent::Phase), 1_000);
-    }
-
-    #[test]
-    fn cooldown_complete_is_2000ms() {
-        assert_eq!(cooldown_ms(SoundEvent::Complete), 2_000);
-    }
-
     #[test]
     fn should_play_start_always() {
         reset_cooldown(SoundEvent::Start);
@@ -121,19 +100,6 @@ mod tests {
             "immediate second call should be debounced"
         );
     }
-
-    #[test]
-    fn should_play_complete_debounces() {
-        for e in all_events() {
-            reset_cooldown(e);
-        }
-        assert!(should_play(SoundEvent::Complete), "first call should play");
-        assert!(
-            !should_play(SoundEvent::Complete),
-            "immediate second call should be debounced"
-        );
-    }
-
     #[test]
     fn reset_cooldown_allows_replay() {
         for e in all_events() {
@@ -146,15 +112,4 @@ mod tests {
             should_play(SoundEvent::Pause),
             "after reset, should play again"
         );
-    }
-
-    #[test]
-    fn now_ms_returns_nonzero() {
-        let t = now_ms();
-        assert!(
-            t > 1_700_000_000_000,
-            "expected reasonable UNIX epoch ms, got {}",
-            t
-        );
-    }
-}
+    }}

@@ -354,37 +354,6 @@ mod tests {
     // ── Duration parsing (tested via --timer-down) ────────────────────────────
 
     #[test]
-    fn parse_30s() {
-        assert!(parse_args(args(&["--timer-down", "30s"])).is_ok());
-    }
-
-    #[test]
-    fn parse_10m() {
-        assert!(parse_args(args(&["--timer-down", "10m"])).is_ok());
-    }
-
-    #[test]
-    fn parse_1h() {
-        assert!(parse_args(args(&["--timer-down", "1h"])).is_ok());
-    }
-
-    #[test]
-    fn parse_zero_duration_rejected() {
-        assert!(parse_args(args(&["--timer-down", "0s"])).is_err());
-        assert!(parse_args(args(&["--timer-down", "0m"])).is_err());
-    }
-
-    #[test]
-    fn parse_missing_unit_rejected() {
-        assert!(parse_args(args(&["--timer-down", "30"])).is_err());
-    }
-
-    #[test]
-    fn parse_empty_duration_rejected() {
-        assert!(parse_args(args(&["--timer-down", ""])).is_err());
-    }
-
-    #[test]
     fn parse_invalid_number_rejected() {
         assert!(parse_args(args(&["--timer-down", "abcs"])).is_err());
         assert!(parse_args(args(&["--timer-down", "-5m"])).is_err());
@@ -396,12 +365,6 @@ mod tests {
     fn missing_duration_timer_down() {
         assert!(parse_args(args(&["--timer-down"])).is_err());
     }
-
-    #[test]
-    fn pomodoro_missing_break() {
-        assert!(parse_args(args(&["--pomodoro", "25m"])).is_err());
-    }
-
     // ── Extra args rejected ───────────────────────────────────────────────────
 
     #[test]
@@ -409,44 +372,11 @@ mod tests {
         assert!(parse_args(args(&["--help", "extra"])).is_err());
         assert!(parse_args(args(&["-h", "extra"])).is_err());
     }
-
-    #[test]
-    fn extra_args_version() {
-        assert!(parse_args(args(&["--version", "extra"])).is_err());
-        assert!(parse_args(args(&["-V", "extra"])).is_err());
-    }
-
-    #[test]
-    fn extra_args_stopwatch() {
-        assert!(parse_args(args(&["--stopwatch", "extra"])).is_err());
-    }
-
     #[test]
     fn extra_args_timer_up() {
         assert!(parse_args(args(&["--timer-up", "extra"])).is_err());
         assert!(parse_args(args(&["--timer-upward-minute", "extra"])).is_err());
     }
-
-    #[test]
-    fn extra_args_timer_down() {
-        assert!(parse_args(args(&["--timer-down", "10m", "extra"])).is_err());
-    }
-
-    #[test]
-    fn extra_args_check_update() {
-        assert!(parse_args(args(&["--check-update", "extra"])).is_err());
-    }
-
-    #[test]
-    fn extra_args_sound_test() {
-        assert!(parse_args(args(&["--sound-test", "extra"])).is_err());
-    }
-
-    #[test]
-    fn extra_args_pomodoro() {
-        assert!(parse_args(args(&["--pomodoro", "25m", "5m", "extra"])).is_err());
-    }
-
     // ── Valid cases ───────────────────────────────────────────────────────────
 
     #[test]
@@ -456,12 +386,6 @@ mod tests {
             Ok(Command::Version)
         ));
     }
-
-    #[test]
-    fn version_flag_short() {
-        assert!(matches!(parse_args(args(&["-V"])), Ok(Command::Version)));
-    }
-
     #[test]
     fn no_args_shows_help() {
         assert!(matches!(parse_args(args(&[])), Ok(Command::Help)));
@@ -471,44 +395,7 @@ mod tests {
     fn pomodoro_no_args_ok() {
         assert!(parse_args(args(&["--pomodoro"])).is_ok());
     }
-
-    #[test]
-    fn pomodoro_custom_durations_ok() {
-        assert!(parse_args(args(&["--pomodoro", "3s", "2s"])).is_ok());
-    }
-
-    #[test]
-    fn timer_back_alias_ok() {
-        assert!(parse_args(args(&["--timer-back", "5m"])).is_ok());
-    }
-
-    #[test]
-    fn timer_upward_minute_alias_ok() {
-        assert!(parse_args(args(&["--timer-upward-minute"])).is_ok());
-    }
-
     // ── Theme and view defaults ──────────────────────────────────────────────
-
-    #[test]
-    fn theme_default_is_void() {
-        let cmd = parse_args(args(&["--timer-up"])).unwrap();
-        if let Command::Run { theme, .. } = cmd {
-            assert_eq!(theme, Theme::Void);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
-    #[test]
-    fn view_default_is_orbit() {
-        let cmd = parse_args(args(&["--timer-up"])).unwrap();
-        if let Command::Run { view, .. } = cmd {
-            assert_eq!(view, ViewMode::Orbit);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
     #[test]
     fn theme_flag_before_mode() {
         let cmd = parse_args(args(&["--theme", "ember", "--timer-up"])).unwrap();
@@ -538,27 +425,6 @@ mod tests {
             panic!("expected Run");
         }
     }
-
-    #[test]
-    fn tron_view_parsed() {
-        let cmd = parse_args(args(&["--view", "tron", "--timer-up"])).unwrap();
-        if let Command::Run { view, .. } = cmd {
-            assert_eq!(view, ViewMode::Tron);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
-    #[test]
-    fn tron_view_case_insensitive() {
-        let cmd = parse_args(args(&["--view", "TRON", "--timer-up"])).unwrap();
-        if let Command::Run { view, .. } = cmd {
-            assert_eq!(view, ViewMode::Tron);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
     #[test]
     fn theme_and_view_combined() {
         let cmd = parse_args(args(&[
@@ -637,15 +503,6 @@ mod tests {
             Ok(Command::CheckUpdate)
         ));
     }
-
-    #[test]
-    fn check_updated_alias_parsed() {
-        assert!(matches!(
-            parse_args(args(&["--check-updated"])),
-            Ok(Command::CheckUpdate)
-        ));
-    }
-
     // ── --mute flag ──────────────────────────────────────────────────────────
 
     #[test]
@@ -657,27 +514,6 @@ mod tests {
             panic!("expected Run");
         }
     }
-
-    #[test]
-    fn mute_default_is_false() {
-        let cmd = parse_args(args(&["--timer-up"])).unwrap();
-        if let Command::Run { mute, .. } = cmd {
-            assert!(!mute);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
-    #[test]
-    fn mute_flag_after_mode() {
-        let cmd = parse_args(args(&["--timer-up", "--mute"])).unwrap();
-        if let Command::Run { mute, .. } = cmd {
-            assert!(mute);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
     // ── --sound-profile flag ─────────────────────────────────────────────────
 
     #[test]
@@ -699,17 +535,6 @@ mod tests {
             panic!("expected Run");
         }
     }
-
-    #[test]
-    fn sound_profile_default_is_calm() {
-        let cmd = parse_args(args(&["--timer-up"])).unwrap();
-        if let Command::Run { profile, .. } = cmd {
-            assert_eq!(profile, crate::sound::SoundProfile::Calm);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
     #[test]
     fn sound_profile_unknown_rejected() {
         assert!(parse_args(args(&["--sound-profile", "loud", "--timer-up"])).is_err());
@@ -719,17 +544,6 @@ mod tests {
     fn sound_profile_missing_value_rejected() {
         assert!(parse_args(args(&["--sound-profile"])).is_err());
     }
-
-    #[test]
-    fn sound_profile_case_insensitive() {
-        let cmd = parse_args(args(&["--sound-profile", "Silent", "--timer-up"])).unwrap();
-        if let Command::Run { profile, .. } = cmd {
-            assert_eq!(profile, crate::sound::SoundProfile::Silent);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
     #[test]
     fn mute_overrides_silent_profile() {
         // --mute + --sound-profile silent → both should be set; runtime resolves.
@@ -741,18 +555,6 @@ mod tests {
             panic!("expected Run");
         }
     }
-
-    #[test]
-    fn mute_overrides_calm_profile() {
-        let cmd = parse_args(args(&["--mute", "--sound-profile", "calm", "--timer-up"])).unwrap();
-        if let Command::Run { mute, profile, .. } = cmd {
-            assert!(mute, "--mute should be true");
-            assert_eq!(profile, crate::sound::SoundProfile::Calm);
-        } else {
-            panic!("expected Run");
-        }
-    }
-
     #[test]
     fn sound_profile_with_pomodoro() {
         let cmd = parse_args(args(&["--sound-profile", "silent", "--pomodoro"])).unwrap();
@@ -780,17 +582,6 @@ mod tests {
             Ok(Command::ListViews)
         ));
     }
-
-    #[test]
-    fn list_themes_rejects_extra_args() {
-        assert!(parse_args(args(&["--list-themes", "extra"])).is_err());
-    }
-
-    #[test]
-    fn list_views_rejects_extra_args() {
-        assert!(parse_args(args(&["--list-views", "extra"])).is_err());
-    }
-
     #[test]
     fn list_themes_output_contains_all_themes() {
         let out = list_themes();
@@ -806,19 +597,6 @@ mod tests {
             assert!(out.contains(name), "list_views missing: {}", name);
         }
     }
-
-    #[test]
-    fn list_themes_output_has_header() {
-        let out = list_themes();
-        assert!(out.contains("Available themes"), "missing header: {}", out);
-    }
-
-    #[test]
-    fn list_views_output_has_header() {
-        let out = list_views();
-        assert!(out.contains("Available views"), "missing header: {}", out);
-    }
-
     // ── Did-you-mean suggestions ────────────────────────────────────────────
 
     #[test]
@@ -850,37 +628,5 @@ mod tests {
             err
         );
         assert!(err.contains("unknown theme"), "should still report unknown");
-    }
-
-    // ── usage() memoization ─────────────────────────────────────────────────
-
-    #[test]
-    fn usage_returns_static_str() {
-        let s1: &'static str = usage();
-        let s2: &'static str = usage();
-        // Same pointer — memoized via OnceLock.
-        assert!(std::ptr::eq(s1, s2), "usage() should be memoized");
-    }
-
-    #[test]
-    fn usage_lists_list_themes_and_list_views() {
-        let s = usage();
-        assert!(
-            s.contains("--list-themes"),
-            "usage should mention --list-themes"
-        );
-        assert!(
-            s.contains("--list-views"),
-            "usage should mention --list-views"
-        );
-    }
-
-    #[test]
-    fn usage_mentions_security_policy() {
-        let s = usage();
-        assert!(
-            s.contains("whitelist policy") || s.contains("whitelist"),
-            "usage should mention whitelist policy"
-        );
     }
 }

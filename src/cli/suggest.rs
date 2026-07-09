@@ -158,12 +158,6 @@ mod tests {
     }
 
     #[test]
-    fn closest_picks_smallest_distance() {
-        // "void" vs "void": 0; "void" vs "ember": 4 (out of threshold).
-        assert_eq!(closest("void", THEME_CANDIDATES), Some("void".to_string()));
-    }
-
-    #[test]
     fn closest_tron_family_disambiguation() {
         // "tron-cyan" should win over "tron" for input "tron-cya".
         let got = closest("tron-cya", THEME_CANDIDATES);

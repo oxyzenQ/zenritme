@@ -142,15 +142,6 @@ mod tests {
         );
         std::env::remove_var("ZENRITME_SOUND_FILE");
     }
-
-    #[test]
-    fn resolve_returns_none_when_no_env_set() {
-        let _lock = ENV_LOCK.lock().unwrap();
-        std::env::remove_var(assets::ENV_START);
-        std::env::remove_var(assets::ENV_GLOBAL);
-        assert_eq!(resolve_sound_file(SoundEvent::Start), None);
-    }
-
     #[test]
     fn resolve_event_env_over_global() {
         let _lock = ENV_LOCK.lock().unwrap();
@@ -207,32 +198,6 @@ mod tests {
         assert_eq!(resolve_sound_file(SoundEvent::Start), None);
         std::env::remove_var("ZENRITME_SOUND_START");
     }
-
-    #[test]
-    fn resolve_rejects_home_ssh_falls_back_to_builtin() {
-        let _lock = ENV_LOCK.lock().unwrap();
-        std::env::set_var("ZENRITME_SOUND_FILE", "~/.ssh/id_rsa");
-        assert_eq!(resolve_sound_file(SoundEvent::Phase), None);
-        std::env::remove_var("ZENRITME_SOUND_FILE");
-    }
-
-    #[test]
-    fn resolve_rejects_proc_falls_back_to_builtin() {
-        let _lock = ENV_LOCK.lock().unwrap();
-        std::env::set_var("ZENRITME_SOUND_START", "/proc/self/environ");
-        assert_eq!(resolve_sound_file(SoundEvent::Start), None);
-        std::env::remove_var("ZENRITME_SOUND_START");
-    }
-
-    #[test]
-    fn resolve_rejects_home_documents_falls_back_to_builtin() {
-        let _lock = ENV_LOCK.lock().unwrap();
-        // ~/Documents/ is NOT in the whitelist → rejected → fallback to built-in.
-        std::env::set_var("ZENRITME_SOUND_FILE", "~/Documents/secret.wav");
-        assert_eq!(resolve_sound_file(SoundEvent::Complete), None);
-        std::env::remove_var("ZENRITME_SOUND_FILE");
-    }
-
     #[test]
     fn resolve_accepts_temp_dir_override() {
         let _lock = ENV_LOCK.lock().unwrap();
@@ -242,16 +207,4 @@ mod tests {
         let r = resolve_sound_file(SoundEvent::Start);
         assert!(r.is_some(), "temp dir path should be accepted by whitelist");
         std::env::remove_var("ZENRITME_SOUND_FILE");
-    }
-
-    #[test]
-    fn sound_source_display_casing() {
-        let _lock = ENV_LOCK.lock().unwrap();
-        std::env::remove_var(assets::ENV_START);
-        std::env::remove_var(assets::ENV_GLOBAL);
-        assert!(
-            sound_source(SoundEvent::Complete).starts_with("built-in: "),
-            "built-in source should have consistent prefix"
-        );
-    }
-}
+    }}

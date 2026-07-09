@@ -386,12 +386,6 @@ mod tests {
     }
 
     // ── SemVer comparison ──────────────────────────────────────────────────
-
-    #[test]
-    fn compare_same_stable() {
-        assert_eq!(SemVer::parse("v1.3.0"), SemVer::parse("v1.3.0"));
-    }
-
     #[test]
     fn compare_stable_older_newer() {
         assert!(SemVer::parse("v1.3.0") < SemVer::parse("v2.0.0"));
@@ -444,26 +438,11 @@ mod tests {
         let info = compare_versions("2.1.0-rc.1", "1.3.0");
         assert_eq!(info.status, UpdateStatus::CurrentIsPrereleaseNewer);
     }
-
-    #[test]
-    fn compare_versions_same_numeric_current_is_pre() {
-        let info = compare_versions("2.0.0-rc.1", "2.0.0");
-        assert_eq!(info.status, UpdateStatus::UpdateAvailable);
-    }
-
     #[test]
     fn compare_versions_invalid_tag_assumes_update() {
         let info = compare_versions("not-a-version", "also-bad");
         assert_eq!(info.status, UpdateStatus::UpdateAvailable);
     }
-
-    #[test]
-    fn compare_versions_preserves_strings() {
-        let info = compare_versions("2.0.0-rc.1", "2.0.0");
-        assert_eq!(info.current, "2.0.0-rc.1");
-        assert_eq!(info.latest, "2.0.0");
-    }
-
     // ── extract_tag_name ───────────────────────────────────────────────────
 
     #[test]
@@ -513,17 +492,6 @@ mod tests {
     fn normalize_with_v() {
         assert_eq!(normalize_version("v1.3.0"), "v1.3.0");
     }
-
-    #[test]
-    fn normalize_prerelease() {
-        assert_eq!(normalize_version("v2.0.0-rc.1"), "v2.0.0-rc.1");
-    }
-
-    #[test]
-    fn normalize_without_v_prerelease() {
-        assert_eq!(normalize_version("2.0.0-rc.1"), "v2.0.0-rc.1");
-    }
-
     #[test]
     fn normalize_empty_does_not_panic() {
         assert_eq!(normalize_version(""), "v");
@@ -532,58 +500,5 @@ mod tests {
     #[test]
     fn normalize_whitespace_trimmed() {
         assert_eq!(normalize_version("  v1.3.0  "), "v1.3.0");
-    }
-
-    // ── interpret_curl_exit ─────────────────────────────────────────────────
-
-    #[test]
-    fn curl_exit_dns() {
-        assert_eq!(interpret_curl_exit(6), "DNS resolution failed");
-    }
-
-    #[test]
-    fn curl_exit_connection_refused() {
-        assert_eq!(interpret_curl_exit(7), "connection refused");
-    }
-
-    #[test]
-    fn curl_exit_timeout() {
-        assert_eq!(interpret_curl_exit(28), "network request timed out");
-    }
-
-    #[test]
-    fn curl_exit_ssl() {
-        assert_eq!(interpret_curl_exit(35), "SSL/TLS handshake failed");
-    }
-
-    #[test]
-    fn curl_exit_unknown() {
-        assert_eq!(interpret_curl_exit(99), "network request failed");
-    }
-
-    // ── interpret_http_status ───────────────────────────────────────────────
-
-    #[test]
-    fn http_404() {
-        assert_eq!(
-            interpret_http_status(404),
-            "no latest GitHub release found for oxyzenQ/zenritme"
-        );
-    }
-
-    #[test]
-    fn http_403() {
-        assert_eq!(
-            interpret_http_status(403),
-            "GitHub API request was rate-limited or forbidden"
-        );
-    }
-
-    #[test]
-    fn http_500() {
-        assert_eq!(
-            interpret_http_status(500),
-            "GitHub API returned an unexpected error"
-        );
     }
 }

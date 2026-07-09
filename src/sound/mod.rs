@@ -203,17 +203,9 @@ pub fn sound_test() {
 mod tests {
     use super::*;
 
-    // ── Sound profile ───────────────────────────────────────────────────
-
     #[test]
     fn profile_calm_from_name() {
         assert_eq!(SoundProfile::from_name("calm"), Some(SoundProfile::Calm));
-    }
-
-    #[test]
-    fn profile_calm_case_insensitive() {
-        assert_eq!(SoundProfile::from_name("Calm"), Some(SoundProfile::Calm));
-        assert_eq!(SoundProfile::from_name("CALM"), Some(SoundProfile::Calm));
     }
 
     #[test]
@@ -225,111 +217,9 @@ mod tests {
     }
 
     #[test]
-    fn profile_silent_case_insensitive() {
-        assert_eq!(
-            SoundProfile::from_name("Silent"),
-            Some(SoundProfile::Silent)
-        );
-        assert_eq!(
-            SoundProfile::from_name("SILENT"),
-            Some(SoundProfile::Silent)
-        );
-    }
-
-    #[test]
     fn profile_unknown_rejected() {
         assert_eq!(SoundProfile::from_name("loud"), None);
         assert_eq!(SoundProfile::from_name(""), None);
         assert_eq!(SoundProfile::from_name("off"), None);
-    }
-
-    #[test]
-    fn profile_calm_is_not_silent() {
-        assert!(!SoundProfile::Calm.is_silent());
-    }
-
-    #[test]
-    fn profile_silent_is_silent() {
-        assert!(SoundProfile::Silent.is_silent());
-    }
-
-    // ── Mute/profile precedence ───────────────────────────────────────────
-
-    #[test]
-    fn mute_overrides_calm() {
-        let muted = true;
-        let profile = SoundProfile::Calm;
-        assert!(muted || profile.is_silent(), "mute should suppress");
-    }
-
-    #[test]
-    fn mute_overrides_silent_explicitly() {
-        let muted = true;
-        let profile = SoundProfile::Silent;
-        assert!(muted || profile.is_silent(), "mute should suppress");
-    }
-
-    #[test]
-    fn silent_profile_suppresses_without_mute() {
-        let muted = false;
-        let profile = SoundProfile::Silent;
-        assert!(
-            muted || profile.is_silent(),
-            "silent profile should suppress"
-        );
-    }
-
-    #[test]
-    fn calm_profile_allows_sound_without_mute() {
-        let muted = false;
-        let profile = SoundProfile::Calm;
-        assert!(
-            !(muted || profile.is_silent()),
-            "calm profile should allow sound"
-        );
-    }
-
-    // ── Public API surface ───────────────────────────────────────────────
-
-    #[test]
-    fn sound_event_variants() {
-        let events = [
-            SoundEvent::Start,
-            SoundEvent::Pause,
-            SoundEvent::Phase,
-            SoundEvent::Complete,
-        ];
-        assert_eq!(events.len(), 4);
-        for i in 0..4 {
-            for j in (i + 1)..4 {
-                assert!(events[i] != events[j], "variants should be distinct");
-            }
-        }
-    }
-
-    #[test]
-    fn sound_event_debug_fmt() {
-        assert!(format!("{:?}", SoundEvent::Start).contains("Start"));
-        assert!(format!("{:?}", SoundEvent::Pause).contains("Pause"));
-        assert!(format!("{:?}", SoundEvent::Phase).contains("Phase"));
-        assert!(format!("{:?}", SoundEvent::Complete).contains("Complete"));
-    }
-
-    #[test]
-    fn sound_event_discriminant_order() {
-        assert_eq!(SoundEvent::Start as usize, 0);
-        assert_eq!(SoundEvent::Pause as usize, 1);
-        assert_eq!(SoundEvent::Phase as usize, 2);
-        assert_eq!(SoundEvent::Complete as usize, 3);
-    }
-
-    #[test]
-    fn temp_cleanup_guard_public_api() {
-        let _guard = TempCleanupGuard::install();
-    }
-
-    #[test]
-    fn cleanup_temp_sounds_public_api() {
-        cleanup::cleanup_temp_sounds();
     }
 }

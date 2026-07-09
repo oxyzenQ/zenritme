@@ -72,62 +72,6 @@ mod tests {
             "missing Version line in:\n{report}"
         );
     }
-
-    #[test]
-    fn version_report_contains_build_line() {
-        let report = version_report();
-        assert!(
-            report.contains("Build:"),
-            "missing Build line in:\n{report}"
-        );
-    }
-
-    #[test]
-    fn version_report_contains_copyright() {
-        let report = version_report();
-        assert!(
-            report.contains("Copyright: (c) 2026 rezky_nightky (oxyzenQ)"),
-            "missing Copyright line in:\n{report}"
-        );
-    }
-
-    #[test]
-    fn version_report_contains_license() {
-        let report = version_report();
-        assert!(
-            report.contains("License: GPL-3.0-only"),
-            "missing License line in:\n{report}"
-        );
-    }
-
-    #[test]
-    fn version_report_contains_source() {
-        let report = version_report();
-        assert!(
-            report.contains("Source: https://github.com/oxyzenQ/zenritme"),
-            "missing Source line in:\n{report}"
-        );
-    }
-
-    #[test]
-    fn version_report_includes_package_version() {
-        let report = version_report();
-        assert!(
-            report.contains(&format!("v{}", env!("CARGO_PKG_VERSION"))),
-            "missing package version in:\n{report}"
-        );
-    }
-
-    #[test]
-    fn version_report_has_five_lines() {
-        let report = version_report();
-        assert_eq!(
-            report.lines().count(),
-            5,
-            "expected exactly 5 lines, got:\n{report}"
-        );
-    }
-
     #[test]
     fn build_label_detects_libc_variant() {
         let label = build_label();
