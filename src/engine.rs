@@ -43,6 +43,20 @@ pub struct Engine {
     pomo_cycle: u32,
 }
 
+/// Compute pause-aware elapsed time from a start instant, accumulated pause
+/// duration, and optional active-pause start.
+fn pause_aware_elapsed(
+    start: Instant,
+    accumulated_pause: Duration,
+    pause_start: Option<Instant>,
+) -> Duration {
+    let pause_now = pause_start.map(|ps| ps.elapsed()).unwrap_or(Duration::ZERO);
+    start
+        .elapsed()
+        .saturating_sub(accumulated_pause)
+        .saturating_sub(pause_now)
+}
+
 impl Engine {
     pub fn new(mode: Mode) -> Self {
         let now = Instant::now();
@@ -178,28 +192,14 @@ impl Engine {
         }
     }
 
-    /// Pause-aware session elapsed time.
+    /// Pause-aware elapsed time.
     pub fn elapsed(&self) -> Duration {
-        let pause_now = self
-            .pause_start
-            .map(|ps| ps.elapsed())
-            .unwrap_or(Duration::ZERO);
-        self.session_start
-            .elapsed()
-            .saturating_sub(self.session_paused)
-            .saturating_sub(pause_now)
+        pause_aware_elapsed(self.session_start, self.session_paused, self.pause_start)
     }
 
     /// Pause-aware elapsed time within the current phase.
     fn phase_elapsed(&self) -> Duration {
-        let pause_now = self
-            .pause_start
-            .map(|ps| ps.elapsed())
-            .unwrap_or(Duration::ZERO);
-        self.phase_start
-            .elapsed()
-            .saturating_sub(self.phase_paused)
-            .saturating_sub(pause_now)
+        pause_aware_elapsed(self.phase_start, self.phase_paused, self.pause_start)
     }
 
     /// Returns remaining time for bounded modes (`TimerDown`, `Pomodoro`).

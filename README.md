@@ -65,6 +65,7 @@ Duration format: `30s`, `10m`, `1h`
 | `minimal` | Compact single-line display |
 | `orbit` | Circular progress indicator |
 | `cinematic` | Full-width centered box layout |
+| `tron` | Tron Legacy perspective grid |
 
 ### Check for updates
 
@@ -194,7 +195,7 @@ panics, Ctrl+C, and normal exit paths.
 
 ```
 --theme <THEME>          void | ember | aura | forest | tron | tron-green | tron-cyan | tron-orange | tron-red | tron-yellow | mono  (default: void)
---view <VIEW>            minimal | orbit | cinematic             (default: orbit)
+--view <VIEW>            minimal | orbit | cinematic | tron       (default: orbit)
 --sound-profile <P>    calm | silent                          (default: calm)
 --mute                   suppress all notification sounds       (default: off)
 --focus <DURATION>       focus session length                   (default: 25m)

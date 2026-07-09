@@ -41,10 +41,9 @@ pub(crate) fn colored_bar(progress: f32, width: usize, c: &ColorFields) -> Strin
     let filled = ((clamped * width as f32).round() as usize).min(width);
     let empty = width - filled;
     format!(
-        "[{}{}{}] {:3.0}%",
+        "[{}{}] {:3.0}%",
         colored(&"\u{2588}".repeat(filled), c.progress_fill, c.reset),
         colored(&"\u{2591}".repeat(empty), c.progress_empty, c.reset),
-        c.reset,
         clamped * 100.0,
     )
 }

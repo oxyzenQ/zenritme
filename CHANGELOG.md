@@ -7,30 +7,42 @@ All notable changes to zenritme.
 ### Code Quality
 
 ### Removed — Dead Code
-- Removed unused `animation::progress_bar()` (replaced by `render/progress::colored_bar`)
-- Removed unused `sound::beep()` legacy multi-beep function
-- Removed unused `SoundProfile::as_str()` method
-- Removed always-true `input_changed` variable from main render loop
-- Removed 6 dead tests (progress_bar tests, as_str roundtrip)
+- Removed unused `ColorFields::label` field (never read anywhere in the codebase)
+- Removed unused `RenderState::total` field (computed but never consumed by any view)
+- Removed `#[allow(dead_code)]` from `ColorFields` and `RenderState` (all fields now used)
+- Removed redundant `c.reset` in `colored_bar` format string (double reset — `colored()` already appends reset)
 
 ### Changed — Deduplication
+- Extracted `pause_aware_elapsed()` helper in engine.rs, eliminating duplicated pause-now computation between `elapsed()` and `phase_elapsed()`
 - Extracted `Mode::phase_duration(PomodoroPhase)` and `Mode::pomodoro_cycles()` methods, eliminating 4 repeated PomodoroPhase-to-duration match blocks across engine.rs, main.rs, and render/progress.rs
 - Shared `args()` test helper between `cli/mod.rs` and `cli/pomodoro.rs` (was duplicated identically)
 - Replaced local `plain_colors()` test helper in progress.rs with `ColorFields::plain()` from theme.rs
 - Made `ColorFields::plain()` `pub(crate)` for test reuse
+
+### Changed — Documentation
+- Removed version output section from README.md (no hardcoded versions in docs)
+- README now contains no roadmap or version number references
 
 ### Added — Signal Handling Hardening
 - Added SIGINT handler alongside SIGTERM/SIGHUP for complete signal coverage
 - Terminal now restores cleanly on `pkill`, external SIGINT, SIGHUP, and Ctrl+C
 - Updated man page EXIT BEHAVIOR section to reflect the new signal coverage
 
+### Added — 5 Tron Legacy Color Variants
+- `tron-green`  — green circuit board aesthetic
+- `tron-cyan`   — cyan glow
+- `tron-orange` — orange flare
+- `tron-red`    — red alert
+- `tron-yellow` — gold accent
+- Full palette implementations, CLI `--theme` matching, shell completions, man page, and tests
+
 ### Changed — CLI Polish
-- Updated shell completions (bash, zsh, fish) with all 11 themes (was missing 6 Tron variants)
+- Updated shell completions (bash, zsh, fish) with all 11 themes
 - Updated man page `--theme` list with all 11 themes
-- Updated README: theme table (11 themes), version examples (v11.0.0), Options section
+- Updated README: theme table (11 themes), Options section
 
 ### Verified
-- 230 tests PASS
+- All tests PASS
 - clippy: 0 warnings
 - Zero build warnings
 

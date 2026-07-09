@@ -76,13 +76,11 @@ fn no_color_active() -> bool {
 
 /// ANSI color codes for each UI element.
 #[derive(Clone, Copy)]
-#[allow(dead_code)]
 pub struct ColorFields {
     pub title: &'static str,
     pub time: &'static str,
     pub progress_fill: &'static str,
     pub progress_empty: &'static str,
-    pub label: &'static str,
     pub dim: &'static str,
     pub border: &'static str,
     pub accent: &'static str,
@@ -99,7 +97,6 @@ impl ColorFields {
             time: "",
             progress_fill: "",
             progress_empty: "",
-            label: "",
             dim: "",
             border: "",
             accent: "",
@@ -114,7 +111,6 @@ impl ColorFields {
             time: "\x1b[1;38;5;15m",
             progress_fill: "\x1b[38;5;7m",
             progress_empty: "\x1b[38;5;240m",
-            label: "\x1b[38;5;240m",
             dim: "\x1b[38;5;240m",
             border: "\x1b[38;5;240m",
             accent: "\x1b[38;5;15m",
@@ -129,7 +125,6 @@ impl ColorFields {
             time: "\x1b[1;38;5;220m",
             progress_fill: "\x1b[38;5;208m",
             progress_empty: "\x1b[38;5;238m",
-            label: "\x1b[38;5;238m",
             dim: "\x1b[38;5;238m",
             border: "\x1b[38;5;238m",
             accent: "\x1b[38;5;202m",
@@ -144,7 +139,6 @@ impl ColorFields {
             time: "\x1b[1;38;5;159m",
             progress_fill: "\x1b[38;5;111m",
             progress_empty: "\x1b[38;5;238m",
-            label: "\x1b[38;5;238m",
             dim: "\x1b[38;5;238m",
             border: "\x1b[38;5;238m",
             accent: "\x1b[38;5;147m",
@@ -159,7 +153,6 @@ impl ColorFields {
             time: "\x1b[1;38;5;114m",
             progress_fill: "\x1b[38;5;71m",
             progress_empty: "\x1b[38;5;238m",
-            label: "\x1b[38;5;238m",
             dim: "\x1b[38;5;238m",
             border: "\x1b[38;5;238m",
             accent: "\x1b[38;5;107m",
@@ -174,7 +167,6 @@ impl ColorFields {
             time: "\x1b[1;38;5;213m",
             progress_fill: "\x1b[38;5;165m",
             progress_empty: "\x1b[38;5;53m",
-            label: "\x1b[38;5;93m",
             dim: "\x1b[38;5;53m",
             border: "\x1b[38;5;93m",
             accent: "\x1b[38;5;219m",
@@ -189,7 +181,6 @@ impl ColorFields {
             time: "\x1b[1;38;5;119m",
             progress_fill: "\x1b[38;5;46m",
             progress_empty: "\x1b[38;5;22m",
-            label: "\x1b[38;5;28m",
             dim: "\x1b[38;5;22m",
             border: "\x1b[38;5;28m",
             accent: "\x1b[38;5;155m",
@@ -201,10 +192,9 @@ impl ColorFields {
     fn tron_cyan() -> Self {
         Self {
             title: "\x1b[1;38;5;81m",
-            time: "\x1b[1;38;5;123m",
+            time: "\x1b[38;5;123m",
             progress_fill: "\x1b[38;5;51m",
             progress_empty: "\x1b[38;5;17m",
-            label: "\x1b[38;5;25m",
             dim: "\x1b[38;5;17m",
             border: "\x1b[38;5;25m",
             accent: "\x1b[38;5;159m",
@@ -219,7 +209,6 @@ impl ColorFields {
             time: "\x1b[1;38;5;222m",
             progress_fill: "\x1b[38;5;208m",
             progress_empty: "\x1b[38;5;52m",
-            label: "\x1b[38;5;88m",
             dim: "\x1b[38;5;52m",
             border: "\x1b[38;5;88m",
             accent: "\x1b[38;5;220m",
@@ -231,10 +220,9 @@ impl ColorFields {
     fn tron_red() -> Self {
         Self {
             title: "\x1b[1;38;5;197m",
-            time: "\x1b[1;38;5;211m",
+            time: "\x1b[38;5;211m",
             progress_fill: "\x1b[38;5;196m",
             progress_empty: "\x1b[38;5;52m",
-            label: "\x1b[38;5;88m",
             dim: "\x1b[38;5;52m",
             border: "\x1b[38;5;88m",
             accent: "\x1b[38;5;203m",
@@ -246,10 +234,9 @@ impl ColorFields {
     fn tron_yellow() -> Self {
         Self {
             title: "\x1b[1;38;5;226m",
-            time: "\x1b[1;38;5;228m",
+            time: "\x1b[38;5;228m",
             progress_fill: "\x1b[38;5;220m",
             progress_empty: "\x1b[38;5;58m",
-            label: "\x1b[38;5;94m",
             dim: "\x1b[38;5;58m",
             border: "\x1b[38;5;94m",
             accent: "\x1b[38;5;229m",

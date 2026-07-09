@@ -23,6 +23,7 @@ pub enum ViewMode {
     Minimal,
     Orbit,
     Cinematic,
+    Tron,
 }
 
 impl ViewMode {
@@ -32,18 +33,17 @@ impl ViewMode {
             "minimal" => Some(Self::Minimal),
             "orbit" => Some(Self::Orbit),
             "cinematic" => Some(Self::Cinematic),
+            "tron" => Some(Self::Tron),
             _ => None,
         }
     }
 }
 
 /// Snapshot of all render-relevant state, produced each frame by the main loop.
-#[allow(dead_code)]
 pub struct RenderState<'a> {
     pub mode: crate::mode::Mode,
     pub elapsed: Duration,
     pub remaining: Option<Duration>,
-    pub total: Option<Duration>,
     pub progress: Option<f32>,
     pub state: crate::engine::EngineState,
     pub frame: u64,
@@ -74,6 +74,7 @@ pub fn draw(state: &RenderState) {
         ViewMode::Minimal => views::draw_minimal(state),
         ViewMode::Orbit => views::draw_orbit(state),
         ViewMode::Cinematic => views::draw_cinematic(state),
+        ViewMode::Tron => views::draw_tron(state),
     };
     let mut stdout = io::stdout();
     let _ = stdout.write_all(output.as_bytes());

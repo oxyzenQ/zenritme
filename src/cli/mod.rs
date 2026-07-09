@@ -60,7 +60,7 @@ fn build_usage() -> String {
          \x20 zenritme -V, --version\n\n\
          Options:\n\
          \x20 --theme <THEME>          void | ember | aura | forest | tron | tron-green | tron-cyan | tron-orange | tron-red | tron-yellow | mono  (default: void)\n\
-         \x20 --view <VIEW>            minimal | orbit | cinematic             (default: orbit)\n\
+         \x20 --view <VIEW>            minimal | orbit | cinematic | tron       (default: orbit)\n\
          \x20 --sound-profile <P>    calm | silent                          (default: calm)\n\
          \x20 --mute                   suppress all notification sounds       (default: off)\n\
          \x20 --focus <DURATION>       focus session length                   (default: 25m)\n\
@@ -533,6 +533,26 @@ mod tests {
         let cmd = parse_args(args(&["--view", "cinematic", "--timer-up"])).unwrap();
         if let Command::Run { view, .. } = cmd {
             assert_eq!(view, ViewMode::Cinematic);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn tron_view_parsed() {
+        let cmd = parse_args(args(&["--view", "tron", "--timer-up"])).unwrap();
+        if let Command::Run { view, .. } = cmd {
+            assert_eq!(view, ViewMode::Tron);
+        } else {
+            panic!("expected Run");
+        }
+    }
+
+    #[test]
+    fn tron_view_case_insensitive() {
+        let cmd = parse_args(args(&["--view", "TRON", "--timer-up"])).unwrap();
+        if let Command::Run { view, .. } = cmd {
+            assert_eq!(view, ViewMode::Tron);
         } else {
             panic!("expected Run");
         }

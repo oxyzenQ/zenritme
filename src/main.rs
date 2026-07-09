@@ -285,11 +285,6 @@ fn build_render_state<'a>(
         mode: engine.mode(),
         elapsed: engine.elapsed(),
         remaining: engine.remaining(),
-        total: match engine.mode() {
-            mode::Mode::TimerDown { total } => Some(total),
-            mode::Mode::Pomodoro { .. } => Some(engine.mode().phase_duration(engine.pomo_phase())),
-            _ => None,
-        },
         progress: render::compute_progress(engine),
         state: engine.state(),
         frame,
