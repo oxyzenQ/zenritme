@@ -186,5 +186,5 @@ mod tests {
         "mono",
     ];
 
-    const VIEW_CANDIDATES: &[&str] = &["minimal", "orbit", "cinematic"];
+    const VIEW_CANDIDATES: &[&str] = &["minimal", "orbit", "cinematic", "tron"];
 }

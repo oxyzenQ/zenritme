@@ -24,16 +24,7 @@ pub(crate) fn play_file_via_pw(path: &std::path::Path) -> bool {
         .spawn()
     {
         Ok(_) => true,
-        Err(e) => {
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "[zenritme:debug] pw-play spawn failed for {}: {}",
-                path.display(),
-                e
-            );
-            let _ = e;
-            false
-        }
+        Err(_) => false,
     }
 }
 

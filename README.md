@@ -275,6 +275,9 @@ needed.
 - [docs/ENDURANCE.md](docs/ENDURANCE.md) — endurance testing and smoke test
 - [docs/LONG_USAGE_REPORT.md](docs/LONG_USAGE_REPORT.md) — long-usage validation report
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — pre-release checklist
+- [docs/BRANDING.md](docs/BRANDING.md) — brand guidelines and visual identity
+- [docs/ROADMAP.md](docs/ROADMAP.md) — future development roadmap
+- [TRADEMARK.md](TRADEMARK.md) — trademark and intellectual property
 - [assets/sounds/README.md](assets/sounds/README.md) — built-in sound documentation
 - [scripts/doctor.sh](scripts/doctor.sh) — local binary health check
 - [scripts/endurance-smoke.sh](scripts/endurance-smoke.sh) — endurance smoke test
@@ -317,18 +320,22 @@ You may use, study, modify, and redistribute Zenritme under the terms of the GPL
 ## Intellectual Property & Trademark
 
 **zenritme** is the exclusive intellectual property of
-**rezky_nightky (oxyzenQ)**.
+**rezky_nightky (oxyzenQ)**. All rights reserved.
 
 - Source code: licensed under **GPL-3.0-only** (see [LICENSE](LICENSE)).
-- Name, logo, and branding ("the Marks"): governed by
+- Name, logo, branding, and visual identity ("the Marks"): governed by
   [TRADEMARK.md](TRADEMARK.md). The Marks are NOT covered by the GPL and
-  are reserved by the owner.
-- This project is **NOT for sale**. Unauthorized rebranding, relicensing,
-  or source-code theft is strictly prohibited.
+  are solely and exclusively reserved by the owner.
+- This project is **NOT for sale**. Source-code theft, rebranding,
+  relicensing, or unauthorized redistribution is strictly prohibited and
+  will be enforced.
+- Forks must rename, rebrand, and preserve all copyright and license
+  notices. See [TRADEMARK.md](TRADEMARK.md) for full terms.
 
 For trademark licensing or written permission, contact
-**rezky_nightky (oxyzenQ)** — https://github.com/oxyzenQ.
+**rezky_nightky (oxyzenQ)** -- https://github.com/oxyzenQ.
 
 ---
 
-© 2026 rezky_nightky (oxyzenQ). All rights reserved.
+(c) 2026 rezky_nightky (oxyzenQ). All rights reserved.
+zenritme and the zenritme logo are trademarks of rezky_nightky (oxyzenQ).
