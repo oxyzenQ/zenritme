@@ -214,7 +214,7 @@ pub(crate) fn draw_tron(state: &RenderState) -> String {
 
     // ── Grid (below horizon) ──────────────────────────────────────────────
     let h_dash = "\u{2500}"; // ─
-    let v_bar = "\u{2502}";  // │
+    let v_bar = "\u{2502}"; // │
 
     for row_i in 0..grid_rows {
         // Normalized: 0 = just below horizon (far), 1 = bottom (near viewer)
