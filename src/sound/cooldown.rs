@@ -112,4 +112,5 @@ mod tests {
             should_play(SoundEvent::Pause),
             "after reset, should play again"
         );
-    }}
+    }
+}

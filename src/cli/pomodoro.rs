@@ -402,4 +402,5 @@ mod tests {
         let consumed = super::extract_flag(&all, &mut i, &mut opts).unwrap();
         assert!(!consumed);
         assert_eq!(i, 0); // not advanced
-    }}
+    }
+}

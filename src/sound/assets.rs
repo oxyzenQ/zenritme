@@ -93,4 +93,5 @@ mod tests {
             assert!(&data[0..4] == b"RIFF", "{}: missing RIFF header", name);
             assert!(&data[8..12] == b"WAVE", "{}: missing WAVE format", name);
         }
-    }}
+    }
+}

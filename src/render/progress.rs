@@ -107,4 +107,5 @@ mod tests {
         assert!(bar.contains(" 50%"));
         assert!(!bar.contains('\u{2588}'));
         assert!(!bar.contains('\u{2591}'));
-    }}
+    }
+}

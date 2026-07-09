@@ -98,4 +98,5 @@ mod tests {
         let a = completion_burst(0);
         let b = completion_burst(24); // 24 / 3 = 8 = full cycle
         assert_eq!(a, b);
-    }}
+    }
+}

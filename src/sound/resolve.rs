@@ -207,4 +207,5 @@ mod tests {
         let r = resolve_sound_file(SoundEvent::Start);
         assert!(r.is_some(), "temp dir path should be accepted by whitelist");
         std::env::remove_var("ZENRITME_SOUND_FILE");
-    }}
+    }
+}
