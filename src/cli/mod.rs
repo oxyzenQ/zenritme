@@ -117,6 +117,7 @@ pub fn list_views() -> String {
         ("minimal", "Compact single-line display"),
         ("orbit", "Circular progress indicator (default)"),
         ("cinematic", "Full-width centered box layout"),
+        ("tron", "Tron Legacy perspective grid"),
     ];
     format_table("Available views (--view <VIEW>):", rows)
 }
@@ -160,7 +161,7 @@ const THEME_NAMES: &[&str] = &[
 ];
 
 /// All valid view names, for did-you-mean suggestions.
-const VIEW_NAMES: &[&str] = &["minimal", "orbit", "cinematic"];
+const VIEW_NAMES: &[&str] = &["minimal", "orbit", "cinematic", "tron"];
 
 /// Parse all arguments. `--theme`, `--view`, and pomodoro-specific flags are
 /// extracted in a pre-pass so they may appear before or after the mode flag.

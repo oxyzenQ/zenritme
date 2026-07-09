@@ -18,7 +18,7 @@ _zenritme() {
             COMPREPLY=($(compgen -W "void ember aura forest tron tron-green tron-cyan tron-orange tron-red tron-yellow mono" -- "${cur}"))
             return ;;
         --view)
-            COMPREPLY=($(compgen -W "minimal orbit cinematic" -- "${cur}"))
+            COMPREPLY=($(compgen -W "minimal orbit cinematic tron" -- "${cur}"))
             return ;;
         --sound-profile)
             COMPREPLY=($(compgen -W "calm silent" -- "${cur}"))

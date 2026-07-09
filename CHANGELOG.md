@@ -41,6 +41,16 @@ All notable changes to zenritme.
 - Updated man page `--theme` list with all 11 themes
 - Updated README: theme table (11 themes), Options section
 
+### Added — Tron Legacy View
+- `--view tron` — perspective grid inspired by Tron Legacy (2010)
+  - Clear horizon line separating dark sky from the grid floor
+  - Vertical lines converge to center at the horizon
+  - Horizontal lines span full width with perspective compression
+  - Animated grid scroll toward the viewer
+  - Light trail sweep — bright accent-colored band like a light cycle
+  - Title, time, and progress float in the dark sky above the horizon
+- Updated `--list-views`, shell completions (bash, zsh, fish), and man page
+
 ### Verified
 - All tests PASS
 - clippy: 0 warnings
