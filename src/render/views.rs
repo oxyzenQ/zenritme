@@ -238,7 +238,7 @@ pub(crate) fn draw_tron(state: &RenderState) -> String {
         line.push_str(&margin);
 
         for col_i in 0..w {
-            let is_vline = vlines.iter().any(|&vx| vx == col_i);
+            let is_vline = vlines.contains(&col_i);
 
             // Center column — always drawn, slightly brighter (main axis)
             let center = w / 2;
