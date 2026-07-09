@@ -17,15 +17,12 @@ use std::process::{Command, Stdio};
 /// Returns `true` if the process spawned successfully.
 /// In debug builds, logs the failure reason to stderr for diagnostics.
 pub(crate) fn play_file_via_pw(path: &std::path::Path) -> bool {
-    match Command::new("pw-play")
+    Command::new("pw-play")
         .arg(path)
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
-    {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+        .is_ok()
 }
 
 /// Plays a terminal bell character (`\x07`).

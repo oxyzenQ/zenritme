@@ -6,6 +6,13 @@ All notable changes to zenritme.
 
 ### Code Quality
 
+### Fixed — CI
+- Fixed clippy `redundant_pattern_matching` in `src/sound/playback.rs` — replaced `match { Ok(_) => true, Err(_) => false }` with `.is_ok()`
+
+### Removed — Secret Content
+- Removed `docs/ROADMAP.md` — future development plans are confidential
+- Removed roadmap link from README.md project docs section
+
 ### Removed — Dead Code
 - Removed unused `ColorFields::label` field (never read anywhere in the codebase)
 - Removed unused `RenderState::total` field (computed but never consumed by any view)

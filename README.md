@@ -276,7 +276,6 @@ needed.
 - [docs/LONG_USAGE_REPORT.md](docs/LONG_USAGE_REPORT.md) — long-usage validation report
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — pre-release checklist
 - [docs/BRANDING.md](docs/BRANDING.md) — brand guidelines and visual identity
-- [docs/ROADMAP.md](docs/ROADMAP.md) — future development roadmap
 - [TRADEMARK.md](TRADEMARK.md) — trademark and intellectual property
 - [assets/sounds/README.md](assets/sounds/README.md) — built-in sound documentation
 - [scripts/doctor.sh](scripts/doctor.sh) — local binary health check
