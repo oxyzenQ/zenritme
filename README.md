@@ -14,6 +14,63 @@
   </a>
 </p>
 
+> [!WARNING]
+> **ARCHIVED — This project is no longer actively developed.**
+>
+> This repository is preserved as a **read-only artifact**. All code, documentation, and release history remain available for cloning and study, but there will be **no further development, no issue triage, and no security updates**.
+>
+> **Important:** Unlike projects archived for never reaching their goal, zenritme was archived **complete and stable**. All shipped features work. Development ended as part of a deliberate portfolio triage — not because of defects, security issues, or unfinished work.
+
+---
+
+## Why This Project Was Archived
+
+Documented honestly, for anyone (including future me) wondering what happened:
+
+1. **The product is complete.**
+   Timer (up/down), stopwatch, full Pomodoro ritual, 11 themes, 4 views, and a zero-dependency embedded procedural sound system — this is the entire product as designed. Nothing essential was left unfinished. The only features left to build would have been feature creep, not progress.
+
+2. **The terminal timer market is saturated.**
+   Solid free alternatives already exist (pot, porsmo, termdown, tmux Pomodoro plugins, or simply `sleep` + `notify-send`). zenritme's differentiators — embedded procedural audio, theming, polished TUI views — are real, but they are aesthetic, and aesthetic differentiation only matters with distribution and marketing behind it.
+
+3. **Distribution never happened.**
+   No AUR package, no crates.io publication, no package manager presence — only manual tarball installs. The tool never reached an audience, and building that audience requires sustained effort that was deliberately not allocated.
+
+4. **It was not a daily driver — even for its author.**
+   Usage data was unambiguous. A timer that its own author does not reach for daily is unlikely to become a daily tool for anyone else.
+
+5. **Portfolio triage.**
+   Time and energy are finite and better allocated elsewhere. This archive is a deliberate, disciplined decision — zenritme is archived as a **completed work, with dignity**, not as a failure.
+
+---
+
+## Status
+
+**ARCHIVED at its final release.**
+
+Everything shipped remains fully functional and safe:
+
+- Timer up/down, stopwatch, and full Pomodoro flow
+- 11 themes × 4 views
+- Four embedded procedural sounds with per-event overrides, profiles, and cooldowns
+- `--check-update` (read-only, queries GitHub releases API)
+- Shell completions (bash/zsh/fish) and manpage
+
+If this code is useful to you — fork it. GPL-3.0-only, forks are welcome (forks must rename and rebrand — see [TRADEMARK.md](TRADEMARK.md)).
+
+---
+
+## Conditions for Possible Revival
+
+This project may be unarchived only if, at minimum:
+
+- [ ] Daily personal usage is real — measurably, in shell history
+- [ ] A distribution channel (AUR and/or crates.io) is established and maintained
+- [ ] Effort for visual positioning (screenshots/GIFs, distinct identity vs existing tools) is genuinely allocated
+
+Until all three are true, this stays an artifact.
+
+---
 
 ## Examples
 
@@ -206,6 +263,8 @@ panics, Ctrl+C, and normal exit paths.
 
 ## Install
 
+Build and install instructions are preserved for anyone cloning this archive. Nothing here is maintained.
+
 ### From release tarball
 
 ```sh
@@ -271,7 +330,7 @@ needed.
 ## Project docs
 
 - [docs/RULES.md](docs/RULES.md) — project rules, LOC guard, generated assets policy
-- [docs/SECURITY.md](docs/SECURITY.md) — security policy and supply-chain minimization
+- [docs/SECURITY.md](docs/SECURITY.md) — security policy and supply-chain minimization *(archived — no active response)*
 - [docs/ENDURANCE.md](docs/ENDURANCE.md) — endurance testing and smoke test
 - [docs/LONG_USAGE_REPORT.md](docs/LONG_USAGE_REPORT.md) — long-usage validation report
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — pre-release checklist
